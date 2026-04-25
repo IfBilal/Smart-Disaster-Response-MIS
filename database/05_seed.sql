@@ -14,14 +14,14 @@ GO
 -- ============================================================
 -- All passwords = 'Password123!' (bcrypt hash, cost 12)
 INSERT INTO Users (username, email, phone, role, password_hash, is_active) VALUES
-('admin_sara',      'sara.admin@disastermis.pk',    '0300-1111111', 'admin',               '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/lfxeUNY3.MbH5Tq0a', 1),
-('op_khalid',       'khalid.op@disastermis.pk',     '0301-2222222', 'emergency_operator',  '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/lfxeUNY3.MbH5Tq0a', 1),
-('officer_aisha',   'aisha.field@disastermis.pk',   '0302-3333333', 'field_officer',       '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/lfxeUNY3.MbH5Tq0a', 1),
-('wm_hassan',       'hassan.wm@disastermis.pk',     '0303-4444444', 'warehouse_manager',   '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/lfxeUNY3.MbH5Tq0a', 1),
-('finance_nadia',   'nadia.finance@disastermis.pk', '0304-5555555', 'finance_officer',     '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/lfxeUNY3.MbH5Tq0a', 1),
-('admin_bilal',     'bilal.admin@disastermis.pk',   '0305-6666666', 'admin',               '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/lfxeUNY3.MbH5Tq0a', 1),
-('op_zara',         'zara.op@disastermis.pk',       '0306-7777777', 'emergency_operator',  '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/lfxeUNY3.MbH5Tq0a', 1),
-('officer_omar',    'omar.field@disastermis.pk',    '0307-8888888', 'field_officer',       '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/lfxeUNY3.MbH5Tq0a', 1);
+('admin_sara',      'sara.admin@disastermis.pk',    '0300-1111111', 'admin',               '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
+('op_khalid',       'khalid.op@disastermis.pk',     '0301-2222222', 'emergency_operator',  '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
+('officer_aisha',   'aisha.field@disastermis.pk',   '0302-3333333', 'field_officer',       '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
+('wm_hassan',       'hassan.wm@disastermis.pk',     '0303-4444444', 'warehouse_manager',   '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
+('finance_nadia',   'nadia.finance@disastermis.pk', '0304-5555555', 'finance_officer',     '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
+('admin_bilal',     'bilal.admin@disastermis.pk',   '0305-6666666', 'admin',               '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
+('op_zara',         'zara.op@disastermis.pk',       '0306-7777777', 'emergency_operator',  '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
+('officer_omar',    'omar.field@disastermis.pk',    '0307-8888888', 'field_officer',       '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1);
 GO
 
 -- ============================================================
@@ -65,15 +65,13 @@ INSERT INTO RescueTeams (team_name, team_type, current_location, availability_st
 ('Echo Rapid Response',  'rescue',  'Multan Cantt',               'available',  12);
 GO
 
--- TeamMembers (assign Users as team members)
+-- TeamMembers (each user belongs to exactly one team)
 INSERT INTO TeamMembers (team_id, member_id, user_id, member_role) VALUES
 (1, 1, 3, 'Team Lead'),
 (1, 2, 8, 'Paramedic'),
-(2, 1, 3, NULL),   -- Note: user 3 already in team 1; adjust for real demo
-(3, 1, 8, 'Rescue Specialist');
+(2, 1, 6, 'Team Lead'),
+(3, 1, 7, 'Rescue Specialist');
 GO
--- Fix: remove duplicate user assignment — demo only
--- In real data, each user belongs to exactly one team
 
 -- TeamAssignments
 INSERT INTO TeamAssignments (team_id, report_id, status, notes) VALUES

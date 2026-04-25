@@ -105,7 +105,7 @@ export default function AnalyticsPage() {
             <h3 className="font-semibold text-gray-700 mb-4">Incidents by Severity</h3>
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
-                <Pie data={incidents?.bySeverity || []} dataKey="count" nameKey="severity_level" cx="50%" cy="50%" outerRadius={80} label={({ severity_level, count }) => `${severity_level}: ${count}`} labelLine={false}>
+                <Pie data={incidents?.bySeverity || []} dataKey="count" nameKey="severity_level" cx="50%" cy="50%" outerRadius={80} label labelLine={false}>
                   {(incidents?.bySeverity || []).map((_, index) => (
                     <Cell key={index} fill={COLORS[index % COLORS.length]} />
                   ))}

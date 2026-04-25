@@ -66,26 +66,37 @@ export default function Navbar({ username, role }: NavbarProps) {
   }
 
   return (
-    <nav className="bg-blue-800 text-white px-6 py-3 flex items-center justify-between shadow">
-      <div className="flex items-center gap-6">
-        <span className="font-bold text-lg">DisasterMIS</span>
-        <div className="hidden md:flex gap-4 text-sm">
-          {links.map((link) => (
-            <Link key={link.href} href={link.href} className="hover:text-blue-200">
-              {link.label}
-            </Link>
-          ))}
+    <nav style={{ backgroundColor: '#1e3a5f', color: '#ffffff' }} className="px-6 py-0 shadow-md">
+      <div className="flex items-center justify-between max-w-7xl mx-auto">
+        <div className="flex items-center">
+          <span className="font-bold text-lg py-4 mr-8 text-white">
+            🚨 DisasterMIS
+          </span>
+          <div className="hidden md:flex">
+            {links.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="px-4 py-4 text-sm font-medium text-blue-100 hover:text-white hover:bg-blue-700 transition-colors"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="flex items-center gap-4 text-sm">
-        <span className="text-blue-200">{roleLabel[role] || role}</span>
-        <span className="font-medium">{username}</span>
-        <button
-          onClick={handleLogout}
-          className="bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded text-sm"
-        >
-          Logout
-        </button>
+        <div className="flex items-center gap-3 py-3">
+          <div className="text-right hidden sm:block">
+            <p className="text-xs text-blue-300">{roleLabel[role] || role}</p>
+            <p className="text-sm font-semibold text-white">{username}</p>
+          </div>
+          <button
+            onClick={handleLogout}
+            style={{ backgroundColor: '#c0392b', color: '#ffffff' }}
+            className="px-4 py-2 rounded text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            Logout
+          </button>
+        </div>
       </div>
     </nav>
   )

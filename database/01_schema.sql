@@ -1,12 +1,10 @@
 -- Smart Disaster Response MIS
 -- Run: sqlcmd -S localhost -U sa -P <password> -i database/01_schema.sql
 
-IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'DisasterMIS')
-    CREATE DATABASE DisasterMIS;
-GO
+CREATE DATABASE DisasterMIS;
 
 USE DisasterMIS;
-GO
+
 
 -- ============================================================
 -- GROUP A: User Management & Authentication
@@ -29,7 +27,7 @@ CREATE TABLE Users (
         'warehouse_manager', 'finance_officer'
     ))
 );
-GO
+
 
 CREATE TABLE Citizens (
     citizen_id    INT            NOT NULL IDENTITY(1,1),
@@ -41,7 +39,7 @@ CREATE TABLE Citizens (
     CONSTRAINT PK_Citizens     PRIMARY KEY (citizen_id),
     CONSTRAINT UQ_Citizens_cnic UNIQUE (cnic)
 );
-GO
+
 
 -- ============================================================
 -- GROUP B: Emergency Reporting
@@ -66,7 +64,7 @@ CREATE TABLE EmergencyReports (
     CONSTRAINT CK_ER_status         CHECK (status IN ('pending', 'in_progress', 'resolved', 'closed')),
     CONSTRAINT CK_ER_disaster_type  CHECK (disaster_type IN ('flood', 'earthquake', 'fire', 'other'))
 );
-GO
+
 
 CREATE TABLE MediaAttachments (
     attachment_id INT           NOT NULL IDENTITY(1,1),
@@ -80,7 +78,7 @@ CREATE TABLE MediaAttachments (
     CONSTRAINT FK_MA_uploaded_by   FOREIGN KEY (uploaded_by) REFERENCES Users(user_id),
     CONSTRAINT CK_MA_media_type    CHECK (media_type IN ('image', 'video', 'audio', 'document'))
 );
-GO
+
 
 CREATE TABLE Notifications (
     notification_id   INT            NOT NULL IDENTITY(1,1),
@@ -93,7 +91,7 @@ CREATE TABLE Notifications (
     CONSTRAINT FK_Notif_user    FOREIGN KEY (user_id) REFERENCES Users(user_id),
     CONSTRAINT CK_Notif_type    CHECK (notification_type IN ('alert', 'assignment', 'approval', 'system'))
 );
-GO
+
 
 -- ============================================================
 -- GROUP C: Rescue Operations
@@ -110,7 +108,7 @@ CREATE TABLE RescueTeams (
     CONSTRAINT CK_RT_team_type    CHECK (team_type IN ('medical', 'fire', 'rescue')),
     CONSTRAINT CK_RT_availability CHECK (availability_status IN ('available', 'assigned', 'busy', 'completed'))
 );
-GO
+
 
 -- Composite PK: weak entity owned by RescueTeams
 CREATE TABLE TeamMembers (
@@ -124,7 +122,7 @@ CREATE TABLE TeamMembers (
     CONSTRAINT FK_TM_user     FOREIGN KEY (user_id) REFERENCES Users(user_id),
     CONSTRAINT UQ_TM_user     UNIQUE (user_id)
 );
-GO
+
 
 CREATE TABLE TeamAssignments (
     assignment_id INT           NOT NULL IDENTITY(1,1),
@@ -139,7 +137,7 @@ CREATE TABLE TeamAssignments (
     CONSTRAINT FK_TA_report       FOREIGN KEY (report_id) REFERENCES EmergencyReports(report_id),
     CONSTRAINT CK_TA_status       CHECK (status IN ('assigned', 'in_progress', 'completed', 'cancelled'))
 );
-GO
+
 
 -- Composite PK: weak entity of RescueTeams; log_id is sequential within each team
 CREATE TABLE DispatchLogs (
@@ -152,7 +150,7 @@ CREATE TABLE DispatchLogs (
     CONSTRAINT PK_DispatchLogs PRIMARY KEY (team_id, log_id),
     CONSTRAINT FK_DL_team      FOREIGN KEY (team_id) REFERENCES RescueTeams(team_id)
 );
-GO
+
 
 -- ============================================================
 -- GROUP D: Hospital & Patient Management
@@ -170,7 +168,7 @@ CREATE TABLE Hospitals (
     CONSTRAINT CK_H_available_beds CHECK (available_beds >= 0),
     CONSTRAINT CK_H_total_beds     CHECK (total_beds >= 0)
 );
-GO
+
 
 CREATE TABLE Patients (
     patient_id       INT           NOT NULL IDENTITY(1,1),
@@ -186,7 +184,7 @@ CREATE TABLE Patients (
     CONSTRAINT FK_Pat_officer   FOREIGN KEY (field_officer_id) REFERENCES Users(user_id),
     CONSTRAINT CK_Pat_condition CHECK (condition IN ('stable', 'critical', 'serious', 'discharged'))
 );
-GO
+
 
 -- ============================================================
 -- GROUP E: Warehouse, Resource & Allocation
@@ -202,12 +200,12 @@ CREATE TABLE Warehouses (
     CONSTRAINT PK_Warehouses PRIMARY KEY (warehouse_id),
     CONSTRAINT FK_WH_manager FOREIGN KEY (manager_id) REFERENCES Users(user_id)
 );
-GO
+
 
 -- FK from DispatchLogs to Warehouses (added after Warehouses is created)
 ALTER TABLE DispatchLogs
     ADD CONSTRAINT FK_DL_warehouse FOREIGN KEY (warehouse_id) REFERENCES Warehouses(warehouse_id);
-GO
+
 
 CREATE TABLE Resources (
     resource_id     INT           NOT NULL IDENTITY(1,1),
@@ -219,7 +217,7 @@ CREATE TABLE Resources (
     CONSTRAINT CK_Res_type   CHECK (resource_type IN ('food', 'water', 'medicine', 'shelter', 'equipment')),
     CONSTRAINT CK_Res_unit   CHECK (unit_of_measure IN ('kg', 'litre', 'unit', 'box'))
 );
-GO
+
 
 -- Composite PK: weak entity with dual ownership (warehouse + resource)
 CREATE TABLE WarehouseInventory (
@@ -234,7 +232,7 @@ CREATE TABLE WarehouseInventory (
     CONSTRAINT CK_WI_quantity        CHECK (quantity_available >= 0),
     CONSTRAINT CK_WI_threshold       CHECK (threshold_level >= 0)
 );
-GO
+
 
 CREATE TABLE ResourceAllocations (
     allocation_id  INT           NOT NULL IDENTITY(1,1),
@@ -257,7 +255,7 @@ CREATE TABLE ResourceAllocations (
     CONSTRAINT CK_RA_qty_dispatched    CHECK (qty_dispatched >= 0),
     CONSTRAINT CK_RA_qty_consumed      CHECK (qty_consumed >= 0)
 );
-GO
+
 
 CREATE TABLE ApprovalRequests (
     approval_id   INT           NOT NULL IDENTITY(1,1),
@@ -277,7 +275,7 @@ CREATE TABLE ApprovalRequests (
     CONSTRAINT CK_AR_status        CHECK (status IN ('pending', 'approved', 'rejected')),
     CONSTRAINT CK_AR_request_type  CHECK (request_type IN ('resource_allocation', 'financial', 'deployment'))
 );
-GO
+
 
 -- ============================================================
 -- GROUP F: Financial Management
@@ -293,26 +291,26 @@ CREATE TABLE Donations (
     donated_at     DATETIME       NOT NULL DEFAULT GETDATE(),
     CONSTRAINT PK_Donations       PRIMARY KEY (donation_id),
     CONSTRAINT FK_Don_received_by FOREIGN KEY (received_by) REFERENCES Users(user_id),
-    CONSTRAINT CK_Don_donor_type  CHECK (donor_type IN ('individual', 'organization', 'government')),
+    CONSTRAINT CK_Don_donor_type  CHECK (donor_type IN ('individual', 'organization', 'vernment')),
     CONSTRAINT CK_Don_amount      CHECK (amount > 0)
 );
-GO
+
 
 CREATE TABLE Expenses (
     expense_id    INT            NOT NULL IDENTITY(1,1),
     recorded_by   INT            NOT NULL,
     allocation_id INT            NULL,
-    category      NVARCHAR(100)  NOT NULL,
+    catery      NVARCHAR(100)  NOT NULL,
     amount        DECIMAL(15,2)  NOT NULL,
     description   NVARCHAR(MAX)  NULL,
     expense_date  DATE           NOT NULL,
     CONSTRAINT PK_Expenses        PRIMARY KEY (expense_id),
     CONSTRAINT FK_Exp_recorded_by FOREIGN KEY (recorded_by)   REFERENCES Users(user_id),
     CONSTRAINT FK_Exp_allocation  FOREIGN KEY (allocation_id) REFERENCES ResourceAllocations(allocation_id),
-    CONSTRAINT CK_Exp_category    CHECK (category IN ('procurement', 'logistics', 'medical', 'admin', 'other')),
+    CONSTRAINT CK_Exp_catery    CHECK (catery IN ('procurement', 'logistics', 'medical', 'admin', 'other')),
     CONSTRAINT CK_Exp_amount      CHECK (amount > 0)
 );
-GO
+
 
 CREATE TABLE FinanceTransactions (
     transaction_id        INT           NOT NULL IDENTITY(1,1),
@@ -337,7 +335,7 @@ CREATE TABLE FinanceTransactions (
         (transaction_type = 'transfer')
     )
 );
-GO
+
 
 -- ============================================================
 -- GROUP G: Audit & Monitoring
@@ -356,9 +354,9 @@ CREATE TABLE AuditLog (
     action_timestamp DATETIME      NOT NULL DEFAULT GETDATE(),
     CONSTRAINT PK_AuditLog       PRIMARY KEY (log_id),
     CONSTRAINT FK_AL_user        FOREIGN KEY (user_id) REFERENCES Users(user_id),
-    CONSTRAINT CK_AL_action_type CHECK (action_type IN ('INSERT', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT'))
+    CONSTRAINT CK_AL_action_type CHECK (action_type IN ('INSERT', 'UPDATE', 'DELETE', 'LOGIN', 'LOUT'))
 );
-GO
+
 
 PRINT 'DisasterMIS schema created: 20 tables ready.';
-GO
+

@@ -14,14 +14,14 @@ GO
 -- ============================================================
 -- All passwords = 'Password123!' (bcrypt hash, cost 12)
 INSERT INTO Users (username, email, phone, role, password_hash, is_active) VALUES
-('admin_sara',      'sara.admin@disastermis.pk',    '0300-1111111', 'admin',               '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
-('op_khalid',       'khalid.op@disastermis.pk',     '0301-2222222', 'emergency_operator',  '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
-('officer_aisha',   'aisha.field@disastermis.pk',   '0302-3333333', 'field_officer',       '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
-('wm_hassan',       'hassan.wm@disastermis.pk',     '0303-4444444', 'warehouse_manager',   '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
-('finance_nadia',   'nadia.finance@disastermis.pk', '0304-5555555', 'finance_officer',     '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
-('admin_bilal',     'bilal.admin@disastermis.pk',   '0305-6666666', 'admin',               '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
-('op_zara',         'zara.op@disastermis.pk',       '0306-7777777', 'emergency_operator',  '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
-('officer_omar',    'omar.field@disastermis.pk',    '0307-8888888', 'field_officer',       '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1);
+('admin_bilal',  'bilal.admin@disastermis.pk', '0300-1111111', 'admin',               '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
+('op_bilal',    'bilal.op@disastermis.pk',    '0301-2222222', 'emergency_operator',  '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
+('fo_bilal',    'bilal.fo@disastermis.pk',    '0302-3333333', 'field_officer',       '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
+('wm_bilal',    'bilal.wm@disastermis.pk',    '0303-4444444', 'warehouse_manager',   '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
+('fin_bilal',   'bilal.fin@disastermis.pk',   '0304-5555555', 'finance_officer',     '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
+('admin2_bilal','bilal2.admin@disastermis.pk','0305-6666666', 'admin',               '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
+('op2_bilal',   'bilal2.op@disastermis.pk',   '0306-7777777', 'emergency_operator',  '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1),
+('fo2_bilal',   'bilal2.fo@disastermis.pk',   '0307-8888888', 'field_officer',       '$2b$12$qvZSZaUVFQjwsUNix7EqKOMzLTEFnqMuYxhj9jBJMDWczOuqyI1Fi', 1);
 GO
 
 -- ============================================================

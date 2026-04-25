@@ -2,24 +2,154 @@
 
 *, *::before, *::after {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 html {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 body {
-  background-color: #f3f4f6;
-  color: #111827;
-  font-family: Arial, Helvetica, sans-serif;
-  margin: 0;
+  background-color: #070d1c;
+  background-image:
+    radial-gradient(ellipse at 10% 90%, rgba(239, 68, 68, 0.06) 0%, transparent 55%),
+    radial-gradient(ellipse at 90% 10%, rgba(59, 130, 246, 0.08) 0%, transparent 55%);
+  background-attachment: fixed;
+  color: #e2e8f0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
+/* ── ANIMATIONS ─────────────────────────────────── */
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+@keyframes criticalGlow {
+  0%, 100% { box-shadow: 0 0 0   0 rgba(239,68,68,0.00), 0 4px 20px rgba(0,0,0,0.3); }
+  50%       { box-shadow: 0 0 18px 2px rgba(239,68,68,0.22), 0 4px 20px rgba(0,0,0,0.3); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* ── STAGGERED ENTRANCE ─────────────────────────── */
+
+.enter   { animation: fadeInUp 0.42s ease both; }
+.enter-1 { animation: fadeInUp 0.42s 0.05s ease both; }
+.enter-2 { animation: fadeInUp 0.42s 0.10s ease both; }
+.enter-3 { animation: fadeInUp 0.42s 0.15s ease both; }
+.enter-4 { animation: fadeInUp 0.42s 0.20s ease both; }
+.enter-5 { animation: fadeInUp 0.42s 0.25s ease both; }
+.enter-6 { animation: fadeInUp 0.42s 0.30s ease both; }
+.enter-7 { animation: fadeInUp 0.42s 0.35s ease both; }
+.enter-8 { animation: fadeInUp 0.42s 0.40s ease both; }
+
+/* ── SCROLLBAR ──────────────────────────────────── */
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.09); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
+
+/* ── FORM ELEMENTS ──────────────────────────────── */
+
 input, select, textarea {
-  color: #111827;
-  background-color: #ffffff;
+  color: #e2e8f0;
+  background-color: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: rgba(59,130,246,0.55);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
 }
 
 input::placeholder, textarea::placeholder {
-  color: #9ca3af;
+  color: rgba(255,255,255,0.2);
+}
+
+select option {
+  background-color: #0d1a2e;
+  color: #e2e8f0;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.5);
+}
+
+/* ── SELECTION ──────────────────────────────────── */
+
+::selection {
+  background: rgba(59,130,246,0.3);
+  color: #fff;
+}
+
+/* ── STATUS PULSE DOT ───────────────────────────── */
+
+.dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.dot-pulse    { animation: pulseDot 1.8s ease-in-out infinite; }
+.dot-critical { background: #ef4444; }
+.dot-high     { background: #f97316; }
+.dot-medium   { background: #f59e0b; }
+.dot-low      { background: #10b981; }
+.dot-active   { background: #3b82f6; }
+
+/* ── SKELETON LOADER ────────────────────────────── */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite;
+  border-radius: 6px;
+}
+
+/* ── CARD BASE ──────────────────────────────────── */
+
+.card {
+  background: rgba(12,26,52,0.8);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+}
+
+/* ── CRITICAL GLOW ──────────────────────────────── */
+.critical-glow {
+  animation: criticalGlow 2.5s ease-in-out infinite;
 }

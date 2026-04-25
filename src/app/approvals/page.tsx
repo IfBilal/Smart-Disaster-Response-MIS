@@ -50,65 +50,108 @@ export default function ApprovalsPage() {
   }
 
   const canReview = user.role === 'admin' || user.role === 'warehouse_manager' || user.role === 'finance_officer'
-  const typeColor: Record<string, string> = {
-    resource_allocation: 'bg-blue-100 text-blue-700',
-    financial: 'bg-green-100 text-green-700',
-    deployment: 'bg-purple-100 text-purple-700',
+
+  const typeBadgeStyle = (type: string): React.CSSProperties => {
+    const map: Record<string, { bg: string; color: string; border: string }> = {
+      resource_allocation: { bg: 'rgba(59,130,246,0.12)',  color: '#60a5fa', border: 'rgba(59,130,246,0.3)' },
+      financial:           { bg: 'rgba(16,185,129,0.12)',  color: '#34d399', border: 'rgba(16,185,129,0.3)' },
+      deployment:          { bg: 'rgba(139,92,246,0.12)',  color: '#a78bfa', border: 'rgba(139,92,246,0.3)' },
+    }
+    const s = map[type] || { bg: 'rgba(100,116,139,0.12)', color: '#94a3b8', border: 'rgba(100,116,139,0.3)' }
+    return {
+      backgroundColor: s.bg, color: s.color, border: `1px solid ${s.border}`,
+      padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '600', display: 'inline-block',
+    }
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#070d1c' }}>
       <Navbar username={user.username} role={user.role} />
 
-      <div className="max-w-6xl mx-auto p-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">Approvals Queue</h2>
+      <main style={{ marginLeft: '220px', flex: 1, padding: '32px', minWidth: 0 }}>
+        <div className="enter" style={{ marginBottom: '28px' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#f1f5f9', letterSpacing: '-0.02em', margin: '0 0 4px' }}>
+            Approvals Queue
+          </h1>
+          <p style={{ color: '#475569', fontSize: '13px', margin: 0 }}>
+            Review and process pending approval requests
+          </p>
+        </div>
 
         {approvals.length === 0 ? (
-          <div className="bg-white rounded shadow p-8 text-center text-gray-400">
-            No pending approval requests
+          <div className="enter-1" style={{ background: '#0c1829', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '60px 20px', textAlign: 'center' }}>
+            <p style={{ color: '#475569', fontSize: '14px', margin: 0 }}>No pending approval requests</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {approvals.map(a => (
-              <div key={a.approval_id} className="bg-white rounded shadow p-4">
-                <div className="flex justify-between items-start mb-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {approvals.map((a, idx) => (
+              <div key={a.approval_id} className={`enter-${Math.min(idx + 1, 8)}`} style={{
+                background: '#0c1829', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '20px',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-gray-800">#{a.approval_id}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded ${typeColor[a.request_type] || 'bg-gray-100 text-gray-600'}`}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ color: '#60a5fa', fontSize: '13px', fontWeight: '700' }}>#{a.approval_id}</span>
+                      <span style={typeBadgeStyle(a.request_type)}>
                         {a.request_type.replace('_', ' ')}
                       </span>
-                      <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">{a.status}</span>
+                      <span style={{
+                        backgroundColor: 'rgba(245,158,11,0.12)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.3)',
+                        padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '600', display: 'inline-block',
+                      }}>
+                        {a.status}
+                      </span>
                     </div>
-                    <p className="text-sm text-gray-500">
-                      Requested by: <strong>{a.requested_by_name}</strong> ({a.requested_by_role.replace('_', ' ')})
+                    <p style={{ color: '#94a3b8', fontSize: '13px', margin: '0 0 4px' }}>
+                      Requested by:{' '}
+                      <strong style={{ color: '#cbd5e1' }}>{a.requested_by_name}</strong>
+                      {' '}
+                      <span style={{ color: '#64748b' }}>({a.requested_by_role.replace('_', ' ')})</span>
                     </p>
-                    <p className="text-xs text-gray-400">{new Date(a.requested_at).toLocaleString()}</p>
-                    {a.reference_id && <p className="text-xs text-gray-500 mt-1">Reference ID: #{a.reference_id}</p>}
-                    {a.remarks && <p className="text-xs text-gray-500 mt-1 italic">{a.remarks}</p>}
+                    <p style={{ color: '#475569', fontSize: '12px', margin: '0 0 4px' }}>
+                      {new Date(a.requested_at).toLocaleString()}
+                    </p>
+                    {a.reference_id && (
+                      <p style={{ color: '#64748b', fontSize: '12px', margin: '0 0 4px' }}>
+                        Reference ID: <span style={{ color: '#94a3b8' }}>#{a.reference_id}</span>
+                      </p>
+                    )}
+                    {a.remarks && (
+                      <p style={{ color: '#64748b', fontSize: '12px', margin: '0', fontStyle: 'italic' }}>{a.remarks}</p>
+                    )}
                   </div>
                 </div>
 
                 {canReview && a.status === 'pending' && (
-                  <div className="border-t pt-3 flex gap-3 items-center">
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '16px', display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <input
                       type="text"
                       placeholder="Remarks (optional)"
                       value={remarks[a.approval_id] || ''}
                       onChange={e => setRemarks(prev => ({ ...prev, [a.approval_id]: e.target.value }))}
-                      className="flex-1 border rounded px-3 py-1.5 text-sm"
+                      style={{ flex: 1 }}
                     />
                     <button
                       onClick={() => review(a.approval_id, 'approved')}
                       disabled={processing === a.approval_id}
-                      className="bg-green-600 text-white px-4 py-1.5 rounded text-sm hover:bg-green-700 disabled:opacity-50"
+                      style={{
+                        background: 'linear-gradient(135deg,#10b981,#059669)', boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
+                        color: '#fff', border: 'none', padding: '7px 16px', borderRadius: '7px',
+                        fontSize: '12px', fontWeight: '600', cursor: processing === a.approval_id ? 'not-allowed' : 'pointer',
+                        opacity: processing === a.approval_id ? 0.6 : 1, whiteSpace: 'nowrap',
+                      }}
                     >
-                      Approve
+                      {processing === a.approval_id ? 'Processing…' : 'Approve'}
                     </button>
                     <button
                       onClick={() => review(a.approval_id, 'rejected')}
                       disabled={processing === a.approval_id}
-                      className="bg-red-600 text-white px-4 py-1.5 rounded text-sm hover:bg-red-700 disabled:opacity-50"
+                      style={{
+                        background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
+                        color: '#f87171', padding: '7px 16px', borderRadius: '7px',
+                        fontSize: '12px', fontWeight: '600', cursor: processing === a.approval_id ? 'not-allowed' : 'pointer',
+                        opacity: processing === a.approval_id ? 0.6 : 1, whiteSpace: 'nowrap',
+                      }}
                     >
                       Reject
                     </button>
@@ -118,7 +161,7 @@ export default function ApprovalsPage() {
             ))}
           </div>
         )}
-      </div>
+      </main>
     </div>
   )
 }

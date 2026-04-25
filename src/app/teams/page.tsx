@@ -13,17 +13,17 @@ interface Team {
   current_members: number
 }
 
-const statusColor: Record<string, string> = {
-  available: 'bg-green-100 text-green-700',
-  assigned: 'bg-blue-100 text-blue-700',
-  busy: 'bg-orange-100 text-orange-700',
-  completed: 'bg-gray-100 text-gray-600',
+const statusBadge: Record<string, { bg: string; color: string; border: string }> = {
+  available: { bg: 'rgba(16,185,129,0.12)',  color: '#34d399', border: 'rgba(16,185,129,0.3)'  },
+  assigned:  { bg: 'rgba(59,130,246,0.12)',  color: '#60a5fa', border: 'rgba(59,130,246,0.3)'  },
+  busy:      { bg: 'rgba(249,115,22,0.12)',  color: '#fb923c', border: 'rgba(249,115,22,0.3)'  },
+  completed: { bg: 'rgba(100,116,139,0.12)', color: '#94a3b8', border: 'rgba(100,116,139,0.3)' },
 }
 
-const typeColor: Record<string, string> = {
-  medical: 'bg-red-50 text-red-600',
-  fire: 'bg-orange-50 text-orange-600',
-  rescue: 'bg-blue-50 text-blue-600',
+const typeBadge: Record<string, { bg: string; color: string; border: string }> = {
+  medical: { bg: 'rgba(239,68,68,0.12)',  color: '#f87171', border: 'rgba(239,68,68,0.3)'  },
+  fire:    { bg: 'rgba(249,115,22,0.12)', color: '#fb923c', border: 'rgba(249,115,22,0.3)' },
+  rescue:  { bg: 'rgba(59,130,246,0.12)', color: '#60a5fa', border: 'rgba(59,130,246,0.3)' },
 }
 
 export default function TeamsPage() {
@@ -61,56 +61,70 @@ export default function TeamsPage() {
     }
   }
 
+  const labelStyle: React.CSSProperties = {
+    fontSize: '11px',
+    fontWeight: '600',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    display: 'block',
+    marginBottom: '8px',
+  }
+
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#070d1c' }}>
       <Navbar username={user.username} role={user.role} />
 
-      <div className="max-w-6xl mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-800">Rescue Teams</h2>
+      <main style={{ marginLeft: '220px', flex: 1, padding: '32px', minWidth: 0 }}>
+        {/* Header */}
+        <div className="enter" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px' }}>
+          <div>
+            <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#f1f5f9', letterSpacing: '-0.02em', margin: '0 0 4px' }}>Rescue Teams</h1>
+            <p style={{ color: '#475569', fontSize: '13px', margin: 0 }}>Manage and monitor all active response teams</p>
+          </div>
           {user.role === 'admin' && (
             <button
               onClick={() => setShowForm(!showForm)}
-              className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
-            >
-              + New Team
+              style={{ background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', border: 'none', padding: '9px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(59,130,246,0.3)', transition: 'all 0.2s' }}>
+              {showForm ? 'Cancel' : '+ New Team'}
             </button>
           )}
         </div>
 
+        {/* Create team form */}
         {showForm && (
-          <div className="bg-white rounded shadow p-4 mb-6">
-            <h3 className="font-semibold text-gray-700 mb-3">Create Rescue Team</h3>
-            <form onSubmit={createTeam} className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Team Name</label>
-                <input value={form.team_name} onChange={e => setForm(p => ({ ...p, team_name: e.target.value }))} required
-                  className="w-full border rounded px-3 py-2 text-sm" />
+          <div className="enter-1" style={{ background: '#0c1829', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '24px', maxWidth: '520px', marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 20px' }}>Create Rescue Team</h3>
+            <form onSubmit={createTeam}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                <div>
+                  <label style={labelStyle}>Team Name</label>
+                  <input value={form.team_name} onChange={e => setForm(p => ({ ...p, team_name: e.target.value }))} required placeholder="e.g. Alpha Squad" />
+                </div>
+                <div>
+                  <label style={labelStyle}>Type</label>
+                  <select value={form.team_type} onChange={e => setForm(p => ({ ...p, team_type: e.target.value }))}>
+                    <option value="rescue">Rescue</option>
+                    <option value="medical">Medical</option>
+                    <option value="fire">Fire</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Location</label>
+                  <input value={form.current_location} onChange={e => setForm(p => ({ ...p, current_location: e.target.value }))} placeholder="e.g. Islamabad HQ" />
+                </div>
+                <div>
+                  <label style={labelStyle}>Capacity</label>
+                  <input type="number" value={form.capacity} onChange={e => setForm(p => ({ ...p, capacity: e.target.value }))} min="1" />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                <select value={form.team_type} onChange={e => setForm(p => ({ ...p, team_type: e.target.value }))}
-                  className="w-full border rounded px-3 py-2 text-sm">
-                  <option value="rescue">Rescue</option>
-                  <option value="medical">Medical</option>
-                  <option value="fire">Fire</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <input value={form.current_location} onChange={e => setForm(p => ({ ...p, current_location: e.target.value }))}
-                  className="w-full border rounded px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
-                <input type="number" value={form.capacity} onChange={e => setForm(p => ({ ...p, capacity: e.target.value }))}
-                  className="w-full border rounded px-3 py-2 text-sm" min="1" />
-              </div>
-              <div className="col-span-2 flex gap-2">
-                <button type="submit" disabled={loading} className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50">
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button type="submit" disabled={loading}
+                  style={{ background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', border: 'none', padding: '9px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', boxShadow: '0 4px 14px rgba(59,130,246,0.3)', opacity: loading ? 0.6 : 1 }}>
                   {loading ? 'Creating...' : 'Create Team'}
                 </button>
-                <button type="button" onClick={() => setShowForm(false)} className="text-gray-500 px-4 py-2 rounded text-sm border hover:bg-gray-50">
+                <button type="button" onClick={() => setShowForm(false)}
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#64748b', padding: '9px 20px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}>
                   Cancel
                 </button>
               </div>
@@ -118,38 +132,77 @@ export default function TeamsPage() {
           </div>
         )}
 
-        <div className="flex gap-2 mb-4">
-          {['', 'available', 'assigned', 'busy'].map(s => (
-            <button key={s} onClick={() => setFilterStatus(s)}
-              className={`text-sm px-3 py-1 rounded border ${filterStatus === s ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-              {s || 'All'}
+        {/* Filter tabs */}
+        <div className="enter-2" style={{ display: 'flex', gap: '4px', padding: '4px', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', marginBottom: '20px', width: 'fit-content' }}>
+          {[['', 'All Teams'], ['available', 'Available'], ['assigned', 'Assigned'], ['busy', 'Busy'], ['completed', 'Completed']].map(([val, label]) => (
+            <button key={val} onClick={() => setFilterStatus(val)}
+              style={{
+                padding: '7px 16px',
+                borderRadius: '7px',
+                fontSize: '13px',
+                fontWeight: filterStatus === val ? '600' : '400',
+                border: 'none',
+                cursor: 'pointer',
+                background: filterStatus === val ? 'rgba(59,130,246,0.18)' : 'transparent',
+                color: filterStatus === val ? '#60a5fa' : '#64748b',
+                transition: 'all 0.18s',
+              }}>
+              {label}
             </button>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(t => (
-            <div key={t.team_id} className="bg-white rounded shadow p-4">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-semibold text-gray-800">{t.team_name}</h3>
-                <span className={`text-xs px-2 py-0.5 rounded ${statusColor[t.availability_status] || ''}`}>
-                  {t.availability_status}
+        {/* Team cards grid */}
+        <div className="enter-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+          {filtered.map((t, i) => {
+            const sb = statusBadge[t.availability_status] || statusBadge.completed
+            const tb = typeBadge[t.team_type] || { bg: 'rgba(100,116,139,0.12)', color: '#94a3b8', border: 'rgba(100,116,139,0.3)' }
+            const memberPct = t.capacity > 0 ? Math.round((t.current_members / t.capacity) * 100) : 0
+            return (
+              <div key={t.team_id} className={`enter-${Math.min(i + 3, 8)}`} style={{ background: '#0c1829', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '20px', transition: 'border-color 0.2s' }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)')}>
+                {/* Team header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#f1f5f9', margin: 0 }}>{t.team_name}</h3>
+                  <span style={{ backgroundColor: sb.bg, color: sb.color, border: `1px solid ${sb.border}`, padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                    {t.availability_status}
+                  </span>
+                </div>
+
+                {/* Type badge */}
+                <span style={{ backgroundColor: tb.bg, color: tb.color, border: `1px solid ${tb.border}`, padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '600', display: 'inline-block', marginBottom: '14px' }}>
+                  {t.team_type}
                 </span>
+
+                {/* Members progress */}
+                <div style={{ marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '11px', color: '#475569', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Members</span>
+                    <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '600' }}>{t.current_members} / {t.capacity}</span>
+                  </div>
+                  <div style={{ height: '4px', borderRadius: '4px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: '4px', width: `${memberPct}%`, background: memberPct > 80 ? '#ef4444' : memberPct > 50 ? '#f59e0b' : '#10b981', transition: 'width 0.4s' }} />
+                  </div>
+                </div>
+
+                {/* Location */}
+                {t.current_location && (
+                  <p style={{ fontSize: '12px', color: '#475569', margin: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ color: '#334155' }}>&#9679;</span>
+                    {t.current_location}
+                  </p>
+                )}
               </div>
-              <span className={`text-xs px-2 py-0.5 rounded ${typeColor[t.team_type] || 'bg-gray-50 text-gray-600'}`}>
-                {t.team_type}
-              </span>
-              <div className="mt-3 text-sm text-gray-500 space-y-1">
-                <p>Members: {t.current_members} / {t.capacity}</p>
-                {t.current_location && <p>Location: {t.current_location}</p>}
-              </div>
-            </div>
-          ))}
+            )
+          })}
           {filtered.length === 0 && (
-            <div className="col-span-3 text-center text-gray-400 py-8">No teams found</div>
+            <div style={{ gridColumn: '1/-1', textAlign: 'center', color: '#334155', padding: '48px 0', fontSize: '14px' }}>
+              No teams found
+            </div>
           )}
         </div>
-      </div>
+      </main>
     </div>
   )
 }

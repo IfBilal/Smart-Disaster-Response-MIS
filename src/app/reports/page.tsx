@@ -14,18 +14,18 @@ interface Report {
   reported_at: string
 }
 
-const severityStyle: Record<string, { bg: string; color: string }> = {
-  critical: { bg: '#fee2e2', color: '#991b1b' },
-  high:     { bg: '#ffedd5', color: '#9a3412' },
-  medium:   { bg: '#fef9c3', color: '#854d0e' },
-  low:      { bg: '#dcfce7', color: '#166534' },
+const sevBadge: Record<string, { bg: string; color: string; border: string }> = {
+  critical: { bg: 'rgba(239,68,68,0.12)',  color: '#f87171', border: 'rgba(239,68,68,0.3)'  },
+  high:     { bg: 'rgba(249,115,22,0.12)', color: '#fb923c', border: 'rgba(249,115,22,0.3)' },
+  medium:   { bg: 'rgba(245,158,11,0.12)', color: '#fbbf24', border: 'rgba(245,158,11,0.3)' },
+  low:      { bg: 'rgba(16,185,129,0.12)', color: '#34d399', border: 'rgba(16,185,129,0.3)' },
 }
 
-const statusStyle: Record<string, { bg: string; color: string }> = {
-  pending:     { bg: '#f1f5f9', color: '#475569' },
-  in_progress: { bg: '#dbeafe', color: '#1e40af' },
-  resolved:    { bg: '#dcfce7', color: '#166534' },
-  closed:      { bg: '#e5e7eb', color: '#6b7280' },
+const statusBadge: Record<string, { bg: string; color: string; border: string }> = {
+  pending:     { bg: 'rgba(245,158,11,0.12)',  color: '#fbbf24', border: 'rgba(245,158,11,0.3)'  },
+  in_progress: { bg: 'rgba(59,130,246,0.12)',  color: '#60a5fa', border: 'rgba(59,130,246,0.3)'  },
+  resolved:    { bg: 'rgba(16,185,129,0.12)',  color: '#34d399', border: 'rgba(16,185,129,0.3)'  },
+  closed:      { bg: 'rgba(100,116,139,0.12)', color: '#94a3b8', border: 'rgba(100,116,139,0.3)' },
 }
 
 export default function ReportsPage() {
@@ -53,82 +53,103 @@ export default function ReportsPage() {
   const sel = (field: string, value: string) => setFilters(prev => ({ ...prev, [field]: value }))
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#070d1c' }}>
       <Navbar username={user.username} role={user.role} />
 
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#0f172a', margin: 0 }}>Emergency Reports</h2>
-          <Link href="/reports/new" style={{ backgroundColor: '#dc2626', color: '#ffffff', padding: '10px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', textDecoration: 'none' }}>
+      <main style={{ marginLeft: '220px', flex: 1, padding: '32px', minWidth: 0 }}>
+        {/* Header */}
+        <div className="enter" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px' }}>
+          <div>
+            <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#f1f5f9', letterSpacing: '-0.02em', margin: '0 0 4px' }}>Emergency Reports</h1>
+            <p style={{ color: '#475569', fontSize: '13px', margin: 0 }}>Live feed of all incoming disaster reports</p>
+          </div>
+          <Link href="/reports/new" style={{
+            background: 'linear-gradient(135deg, #ef4444, #b91c1c)',
+            color: '#fff',
+            border: 'none',
+            padding: '9px 18px',
+            borderRadius: '8px',
+            fontSize: '13px',
+            fontWeight: '600',
+            textDecoration: 'none',
+            boxShadow: '0 4px 14px rgba(239,68,68,0.3)',
+            display: 'inline-block',
+          }}>
             + New Report
           </Link>
         </div>
 
         {/* Filters */}
-        <div style={{ backgroundColor: '#ffffff', borderRadius: '10px', padding: '16px', marginBottom: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>Filter:</span>
+        <div className="enter-1" style={{ background: '#0c1829', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: '11px', fontWeight: '600', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Filter</span>
           {[
-            { field: 'status', label: 'Status', options: [['', 'All Statuses'], ['pending', 'Pending'], ['in_progress', 'In Progress'], ['resolved', 'Resolved'], ['closed', 'Closed']] },
-            { field: 'severity', label: 'Severity', options: [['', 'All Severities'], ['critical', 'Critical'], ['high', 'High'], ['medium', 'Medium'], ['low', 'Low']] },
-            { field: 'disaster_type', label: 'Type', options: [['', 'All Types'], ['flood', 'Flood'], ['earthquake', 'Earthquake'], ['fire', 'Fire'], ['other', 'Other']] },
+            { field: 'status', options: [['', 'All Statuses'], ['pending', 'Pending'], ['in_progress', 'In Progress'], ['resolved', 'Resolved'], ['closed', 'Closed']] },
+            { field: 'severity', options: [['', 'All Severities'], ['critical', 'Critical'], ['high', 'High'], ['medium', 'Medium'], ['low', 'Low']] },
+            { field: 'disaster_type', options: [['', 'All Types'], ['flood', 'Flood'], ['earthquake', 'Earthquake'], ['fire', 'Fire'], ['other', 'Other']] },
           ].map(f => (
-            <select key={f.field} value={filters[f.field as keyof typeof filters]} onChange={e => sel(f.field, e.target.value)}
-              style={{ border: '1.5px solid #d1d5db', borderRadius: '6px', padding: '7px 12px', fontSize: '13px', color: '#111827', backgroundColor: '#ffffff', cursor: 'pointer' }}>
+            <select key={f.field} value={filters[f.field as keyof typeof filters]} onChange={e => sel(f.field, e.target.value)}>
               {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           ))}
           <button onClick={() => setFilters({ status: '', severity: '', disaster_type: '' })}
-            style={{ fontSize: '13px', color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', padding: '7px 8px' }}>
+            style={{ fontSize: '12px', color: '#475569', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 10px' }}>
             Clear
           </button>
         </div>
 
         {/* Table */}
-        <div style={{ backgroundColor: '#ffffff', borderRadius: '10px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+        <div className="enter-2" style={{ background: '#0c1829', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', overflow: 'hidden' }}>
           {loading ? (
-            <p style={{ padding: '40px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>Loading...</p>
+            <p style={{ padding: '48px', textAlign: 'center', color: '#475569', fontSize: '13px' }}>Loading reports...</p>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
                   {['ID', 'Type', 'Severity', 'Location', 'Status', 'Reporter', 'Date', ''].map(h => (
-                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                    <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: '11px', fontWeight: '600', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {reports.map(r => (
-                  <tr key={r.report_id} style={{ borderBottom: '1px solid #f1f5f9' }}
-                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}>
-                    <td style={{ padding: '14px 16px', color: '#64748b', fontWeight: '500' }}>#{r.report_id}</td>
-                    <td style={{ padding: '14px 16px', color: '#0f172a', fontWeight: '500', textTransform: 'capitalize' }}>{r.disaster_type}</td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{ ...severityStyle[r.severity_level], padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
-                        {r.severity_level}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px', color: '#374151', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.location}</td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{ ...statusStyle[r.status], padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
-                        {r.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px', color: '#374151' }}>{r.citizen_name}</td>
-                    <td style={{ padding: '14px 16px', color: '#64748b', fontSize: '13px' }}>{new Date(r.reported_at).toLocaleDateString()}</td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <Link href={`/reports/${r.report_id}`} style={{ color: '#2563eb', fontWeight: '500', textDecoration: 'none', fontSize: '13px' }}>View →</Link>
-                    </td>
-                  </tr>
-                ))}
+                {reports.map(r => {
+                  const sev = sevBadge[r.severity_level] || sevBadge.low
+                  const st = statusBadge[r.status] || statusBadge.closed
+                  return (
+                    <tr key={r.report_id}
+                      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.15s' }}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.025)')}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
+                      <td style={{ padding: '12px 16px', color: '#475569', fontSize: '13px', fontWeight: '500' }}>#{r.report_id}</td>
+                      <td style={{ padding: '12px 16px', color: '#cbd5e1', fontSize: '13px', fontWeight: '500', textTransform: 'capitalize' }}>{r.disaster_type}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{ backgroundColor: sev.bg, color: sev.color, border: `1px solid ${sev.border}`, padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' }}>
+                          {r.severity_level}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '13px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.location}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{ backgroundColor: st.bg, color: st.color, border: `1px solid ${st.border}`, padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' }}>
+                          {r.status.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', color: '#cbd5e1', fontSize: '13px' }}>{r.citizen_name}</td>
+                      <td style={{ padding: '12px 16px', color: '#475569', fontSize: '12px' }}>{new Date(r.reported_at).toLocaleDateString()}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <Link href={`/reports/${r.report_id}`} style={{ color: '#60a5fa', fontWeight: '600', textDecoration: 'none', fontSize: '12px' }}>View →</Link>
+                      </td>
+                    </tr>
+                  )
+                })}
                 {reports.length === 0 && (
-                  <tr><td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>No reports found</td></tr>
+                  <tr>
+                    <td colSpan={8} style={{ padding: '48px', textAlign: 'center', color: '#475569', fontSize: '13px' }}>No reports found</td>
+                  </tr>
                 )}
               </tbody>
             </table>
           )}
         </div>
-      </div>
+      </main>
     </div>
   )
 }

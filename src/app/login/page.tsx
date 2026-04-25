@@ -14,7 +14,6 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -22,13 +21,7 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password }),
       })
       const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.error || 'Login failed')
-        setLoading(false)
-        return
-      }
-
+      if (!res.ok) { setError(data.error || 'Login failed'); setLoading(false); return }
       const role = data.role
       if (role === 'admin') router.push('/dashboard/admin')
       else if (role === 'emergency_operator') router.push('/dashboard/operator')
@@ -43,80 +36,88 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#1e3a5f', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-      <div style={{ width: '100%', maxWidth: '420px' }}>
-        {/* Header */}
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#070d1c',
+      backgroundImage: `
+        radial-gradient(ellipse at 15% 85%, rgba(239,68,68,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 85% 15%, rgba(59,130,246,0.10) 0%, transparent 50%)
+      `,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+      position: 'relative',
+    }}>
+      {/* Grid overlay */}
+      <div style={{
+        position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
+        backgroundImage: `
+          linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px)
+        `,
+        backgroundSize: '48px 48px',
+      }} />
+
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '390px' }} className="enter">
+        {/* Brand header */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '12px' }}>🚨</div>
-          <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#ffffff', margin: '0 0 6px' }}>
+          <div style={{
+            width: '58px', height: '58px', borderRadius: '16px', margin: '0 auto 16px',
+            background: 'linear-gradient(135deg, #ef4444, #b91c1c)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '26px', boxShadow: '0 8px 28px rgba(239,68,68,0.45)',
+          }}>🚨</div>
+          <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#f1f5f9', margin: '0 0 6px', letterSpacing: '-0.025em' }}>
             Smart Disaster Response
           </h1>
-          <p style={{ color: '#93c5fd', fontSize: '14px', margin: 0 }}>
+          <p style={{ color: '#475569', fontSize: '13px', margin: 0 }}>
             Emergency Management Information System
           </p>
         </div>
 
-        {/* Card */}
-        <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '32px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1e3a5f', marginTop: 0, marginBottom: '24px' }}>
-            Sign in to your account
-          </h2>
+        {/* Login card */}
+        <div style={{
+          background: 'rgba(10, 20, 44, 0.92)',
+          border: '1px solid rgba(255,255,255,0.09)',
+          borderRadius: '16px', padding: '32px',
+          backdropFilter: 'blur(16px)',
+          boxShadow: '0 24px 56px rgba(0,0,0,0.5)',
+        }}>
+          <p style={{ fontSize: '12px', fontWeight: '600', color: '#475569', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '24px' }}>
+            Authorized Personnel Only
+          </p>
 
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 Username
               </label>
               <input
                 type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                autoFocus
-                style={{
-                  width: '100%',
-                  border: '1.5px solid #d1d5db',
-                  borderRadius: '8px',
-                  padding: '10px 14px',
-                  fontSize: '14px',
-                  color: '#111827',
-                  backgroundColor: '#ffffff',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.15s',
-                }}
-                onFocus={e => (e.target.style.borderColor = '#2563eb')}
-                onBlur={e => (e.target.style.borderColor = '#d1d5db')}
+                onChange={e => setUsername(e.target.value)}
+                required autoFocus
+                placeholder="Enter your username"
               />
             </div>
 
             <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 Password
               </label>
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={e => setPassword(e.target.value)}
                 required
-                style={{
-                  width: '100%',
-                  border: '1.5px solid #d1d5db',
-                  borderRadius: '8px',
-                  padding: '10px 14px',
-                  fontSize: '14px',
-                  color: '#111827',
-                  backgroundColor: '#ffffff',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-                onFocus={e => (e.target.style.borderColor = '#2563eb')}
-                onBlur={e => (e.target.style.borderColor = '#d1d5db')}
+                placeholder="••••••••••"
               />
             </div>
 
             {error && (
-              <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '13px', color: '#dc2626' }}>
+              <div style={{
+                background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
+                borderRadius: '8px', padding: '10px 14px', marginBottom: '16px',
+                fontSize: '13px', color: '#fca5a5',
+              }}>
                 {error}
               </div>
             )}
@@ -126,33 +127,33 @@ export default function LoginPage() {
               disabled={loading}
               style={{
                 width: '100%',
-                backgroundColor: loading ? '#93c5fd' : '#1d4ed8',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '12px',
-                fontSize: '15px',
-                fontWeight: '600',
+                background: loading ? 'rgba(59,130,246,0.35)' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                color: '#fff', border: 'none', borderRadius: '10px',
+                padding: '13px', fontSize: '14px', fontWeight: '700',
                 cursor: loading ? 'not-allowed' : 'pointer',
-                transition: 'background-color 0.15s',
+                letterSpacing: '0.01em',
+                boxShadow: loading ? 'none' : '0 4px 18px rgba(59,130,246,0.38)',
+                transition: 'all 0.2s',
               }}
+              onMouseEnter={e => { if (!loading) { (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 24px rgba(59,130,246,0.55)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)' } }}
+              onMouseLeave={e => { if (!loading) { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 18px rgba(59,130,246,0.38)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(0)' } }}
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Authenticating...' : 'Sign In to System'}
             </button>
           </form>
 
-          <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #e5e7eb', textAlign: 'center' }}>
-            <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
-              Not registered?{' '}
-              <a href="/reports/new" style={{ color: '#1d4ed8', fontWeight: '500', textDecoration: 'none' }}>
-                Submit an emergency report
+          <div style={{ marginTop: '20px', paddingTop: '18px', borderTop: '1px solid rgba(255,255,255,0.07)', textAlign: 'center' }}>
+            <p style={{ fontSize: '12px', color: '#475569', margin: 0 }}>
+              Not an operator?{' '}
+              <a href="/reports/new" style={{ color: '#60a5fa', fontWeight: '600', textDecoration: 'none' }}>
+                Submit an emergency report →
               </a>
             </p>
           </div>
         </div>
 
-        <p style={{ textAlign: 'center', color: '#60a5fa', fontSize: '12px', marginTop: '20px' }}>
-          For staff use only. Unauthorized access is prohibited.
+        <p style={{ textAlign: 'center', color: '#1e293b', fontSize: '11px', marginTop: '18px' }}>
+          Unauthorized access to this system is prohibited and monitored.
         </p>
       </div>
     </div>

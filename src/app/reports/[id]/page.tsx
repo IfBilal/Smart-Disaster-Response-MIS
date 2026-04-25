@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, use, useRef } from 'react'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
 
@@ -33,24 +33,47 @@ interface ReportDetail {
   }[]
 }
 
-const statusColor: Record<string, string> = {
-  pending: 'bg-gray-100 text-gray-700',
-  in_progress: 'bg-blue-100 text-blue-700',
-  resolved: 'bg-green-100 text-green-700',
-  closed: 'bg-gray-200 text-gray-500',
+interface Attachment {
+  attachment_id: number
+  file_url: string
+  media_type: string
+  uploaded_at: string
+}
+
+const statusColor: Record<string, { bg: string; color: string }> = {
+  pending:     { bg: '#f1f5f9', color: '#475569' },
+  in_progress: { bg: '#dbeafe', color: '#1e40af' },
+  resolved:    { bg: '#dcfce7', color: '#166534' },
+  closed:      { bg: '#e5e7eb', color: '#6b7280' },
+}
+
+const severityColor: Record<string, { bg: string; color: string }> = {
+  critical: { bg: '#fee2e2', color: '#991b1b' },
+  high:     { bg: '#ffedd5', color: '#9a3412' },
+  medium:   { bg: '#fef9c3', color: '#854d0e' },
+  low:      { bg: '#dcfce7', color: '#166534' },
 }
 
 export default function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [report, setReport] = useState<ReportDetail | null>(null)
+  const [attachments, setAttachments] = useState<Attachment[]>([])
   const [user, setUser] = useState({ username: '', role: '' })
   const [updating, setUpdating] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function loadAttachments() {
+    fetch(`/api/reports/${id}/attachments`).then(r => r.json()).then(d => {
+      if (Array.isArray(d)) setAttachments(d)
+    })
+  }
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => { if (d.username) setUser(d) })
-    fetch(`/api/reports/${id}`).then(r => r.json()).then(d => {
-      if (d.report_id) setReport(d)
-    })
+    fetch(`/api/reports/${id}`).then(r => r.json()).then(d => { if (d.report_id) setReport(d) })
+    loadAttachments()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   async function updateStatus(newStatus: string) {
@@ -69,84 +92,126 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
     }
   }
 
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const res = await fetch(`/api/reports/${id}/attachments`, {
+      method: 'POST',
+      body: formData,
+    })
+    setUploading(false)
+
+    if (res.ok) {
+      loadAttachments()
+    } else {
+      const data = await res.json()
+      alert(data.error || 'Upload failed')
+    }
+
+    // reset input
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  async function deleteAttachment(attachmentId: number) {
+    if (!confirm('Delete this attachment?')) return
+    const res = await fetch(`/api/reports/${id}/attachments`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ attachment_id: attachmentId }),
+    })
+    if (res.ok) loadAttachments()
+  }
+
   if (!report) {
     return (
-      <div className="min-h-screen bg-gray-100">
+      <div style={{ minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
         <Navbar username={user.username} role={user.role} />
-        <div className="p-6 text-center text-gray-400">Loading report...</div>
+        <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>Loading report...</div>
       </div>
     )
   }
 
   const canUpdate = user.role === 'admin' || user.role === 'emergency_operator'
+  const sv = severityColor[report.severity_level] || { bg: '#f1f5f9', color: '#475569' }
+  const st = statusColor[report.status] || { bg: '#f1f5f9', color: '#475569' }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div style={{ minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
       <Navbar username={user.username} role={user.role} />
 
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="flex items-center gap-2 mb-4 text-sm text-gray-500">
-          <Link href="/reports" className="hover:underline">Reports</Link>
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 24px' }}>
+        {/* Breadcrumb */}
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', fontSize: '13px', color: '#64748b' }}>
+          <Link href="/reports" style={{ color: '#2563eb', textDecoration: 'none' }}>Reports</Link>
           <span>/</span>
           <span>#{report.report_id}</span>
         </div>
 
-        <div className="bg-white rounded shadow p-6 mb-6">
-          <div className="flex justify-between items-start mb-4">
+        {/* Main card */}
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '10px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
             <div>
-              <h2 className="text-xl font-bold text-gray-800 capitalize">
+              <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px', textTransform: 'capitalize' }}>
                 {report.disaster_type} Emergency — #{report.report_id}
               </h2>
-              <p className="text-gray-500 text-sm mt-1">{report.location}</p>
+              <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>{report.location}</p>
             </div>
-            <div className="flex gap-2">
-              <span className={`px-3 py-1 rounded text-sm ${statusColor[report.status] || ''}`}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <span style={{ ...st, padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
                 {report.status.replace('_', ' ')}
               </span>
-              <span className="px-3 py-1 rounded text-sm bg-red-100 text-red-700">
+              <span style={{ ...sv, padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
                 {report.severity_level}
               </span>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontSize: '14px', marginBottom: '20px' }}>
             <div>
-              <p className="text-gray-500">Reporter</p>
-              <p className="font-medium">{report.citizen_name}</p>
-              {report.citizen_phone && <p className="text-gray-500">{report.citizen_phone}</p>}
+              <p style={{ color: '#64748b', margin: '0 0 2px', fontSize: '12px' }}>Reporter</p>
+              <p style={{ fontWeight: '600', color: '#0f172a', margin: 0 }}>{report.citizen_name}</p>
+              {report.citizen_phone && <p style={{ color: '#64748b', margin: 0 }}>{report.citizen_phone}</p>}
             </div>
             <div>
-              <p className="text-gray-500">Assigned Operator</p>
-              <p className="font-medium">{report.assigned_operator || 'Unassigned'}</p>
+              <p style={{ color: '#64748b', margin: '0 0 2px', fontSize: '12px' }}>Assigned Operator</p>
+              <p style={{ fontWeight: '600', color: '#0f172a', margin: 0 }}>{report.assigned_operator || 'Unassigned'}</p>
             </div>
             <div>
-              <p className="text-gray-500">Reported At</p>
-              <p className="font-medium">{new Date(report.reported_at).toLocaleString()}</p>
+              <p style={{ color: '#64748b', margin: '0 0 2px', fontSize: '12px' }}>Reported At</p>
+              <p style={{ fontWeight: '500', color: '#0f172a', margin: 0 }}>{new Date(report.reported_at).toLocaleString()}</p>
             </div>
             {report.resolved_at && (
               <div>
-                <p className="text-gray-500">Resolved At</p>
-                <p className="font-medium">{new Date(report.resolved_at).toLocaleString()}</p>
+                <p style={{ color: '#64748b', margin: '0 0 2px', fontSize: '12px' }}>Resolved At</p>
+                <p style={{ fontWeight: '500', color: '#0f172a', margin: 0 }}>{new Date(report.resolved_at).toLocaleString()}</p>
               </div>
             )}
             {report.latitude && (
               <div>
-                <p className="text-gray-500">Coordinates</p>
-                <p className="font-medium">{report.latitude}, {report.longitude}</p>
+                <p style={{ color: '#64748b', margin: '0 0 2px', fontSize: '12px' }}>Coordinates</p>
+                <p style={{ fontWeight: '500', color: '#0f172a', margin: 0 }}>{report.latitude}, {report.longitude}</p>
               </div>
             )}
           </div>
 
           {canUpdate && (
-            <div className="mt-4 pt-4 border-t flex gap-2">
-              <span className="text-sm text-gray-500 self-center">Update Status:</span>
+            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '16px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '13px', color: '#64748b' }}>Update Status:</span>
               {['pending', 'in_progress', 'resolved', 'closed'].map(s => (
-                <button
-                  key={s}
-                  onClick={() => updateStatus(s)}
-                  disabled={updating || report.status === s}
-                  className={`text-xs px-3 py-1.5 rounded border ${report.status === s ? 'bg-gray-200 text-gray-500 cursor-default' : 'hover:bg-gray-100'}`}
-                >
+                <button key={s} onClick={() => updateStatus(s)} disabled={updating || report.status === s}
+                  style={{
+                    fontSize: '12px', padding: '6px 14px', borderRadius: '6px', border: '1.5px solid',
+                    cursor: report.status === s ? 'default' : 'pointer',
+                    backgroundColor: report.status === s ? '#f1f5f9' : '#ffffff',
+                    borderColor: report.status === s ? '#cbd5e1' : '#94a3b8',
+                    color: report.status === s ? '#94a3b8' : '#374151',
+                    fontWeight: report.status === s ? '400' : '500',
+                  }}>
                   {s.replace('_', ' ')}
                 </button>
               ))}
@@ -154,44 +219,114 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded shadow p-4">
-            <h3 className="font-semibold text-gray-700 mb-3">Team Assignments</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+          {/* Assignments */}
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: '600', color: '#0f172a', marginTop: 0, marginBottom: '12px' }}>Team Assignments</h3>
             {report.assignments?.length > 0 ? (
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {report.assignments.map(a => (
-                  <div key={a.assignment_id} className="border rounded p-3 text-sm">
-                    <p className="font-medium">{a.team_name}</p>
-                    <p className="text-gray-500 text-xs">{a.team_type} • {a.status}</p>
-                    <p className="text-gray-400 text-xs">{new Date(a.assigned_at).toLocaleString()}</p>
+                  <div key={a.assignment_id} style={{ border: '1px solid #f1f5f9', borderRadius: '8px', padding: '12px' }}>
+                    <p style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a', margin: '0 0 2px' }}>{a.team_name}</p>
+                    <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 2px' }}>{a.team_type} • {a.status}</p>
+                    <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>{new Date(a.assigned_at).toLocaleString()}</p>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-400">No teams assigned</p>
+              <p style={{ fontSize: '13px', color: '#9ca3af' }}>No teams assigned</p>
             )}
           </div>
 
-          <div className="bg-white rounded shadow p-4">
-            <h3 className="font-semibold text-gray-700 mb-3">Resource Allocations</h3>
+          {/* Allocations */}
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: '600', color: '#0f172a', marginTop: 0, marginBottom: '12px' }}>Resource Allocations</h3>
             {report.allocations?.length > 0 ? (
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {report.allocations.map(a => (
-                  <div key={a.allocation_id} className="border rounded p-3 text-sm">
-                    <div className="flex justify-between">
-                      <p className="font-medium">{a.resource_name}</p>
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{a.status}</span>
+                  <div key={a.allocation_id} style={{ border: '1px solid #f1f5f9', borderRadius: '8px', padding: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <p style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a', margin: 0 }}>{a.resource_name}</p>
+                      <span style={{ fontSize: '11px', backgroundColor: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: '10px' }}>{a.status}</span>
                     </div>
-                    <p className="text-gray-500 text-xs">
+                    <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0' }}>
                       Requested: {a.qty_requested} | Dispatched: {a.qty_dispatched}
                     </p>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-400">No resources allocated</p>
+              <p style={{ fontSize: '13px', color: '#9ca3af' }}>No resources allocated</p>
             )}
           </div>
+        </div>
+
+        {/* Media Attachments */}
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: '600', color: '#0f172a', margin: 0 }}>
+              Media Attachments ({attachments.length})
+            </h3>
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
+                onChange={handleUpload}
+                style={{ display: 'none' }}
+                id="file-upload"
+              />
+              <label htmlFor="file-upload" style={{
+                backgroundColor: uploading ? '#93c5fd' : '#1d4ed8',
+                color: '#ffffff',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: uploading ? 'not-allowed' : 'pointer',
+              }}>
+                {uploading ? 'Uploading...' : '+ Upload File'}
+              </label>
+            </div>
+          </div>
+
+          {attachments.length === 0 ? (
+            <p style={{ fontSize: '13px', color: '#9ca3af', textAlign: 'center', padding: '24px 0' }}>
+              No attachments yet. Upload images, videos or documents related to this incident.
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px' }}>
+              {attachments.map(a => (
+                <div key={a.attachment_id} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                  {a.media_type === 'image' ? (
+                    <a href={a.file_url} target="_blank" rel="noopener noreferrer">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={a.file_url} alt="attachment" style={{ width: '100%', height: '120px', objectFit: 'cover', display: 'block' }} />
+                    </a>
+                  ) : (
+                    <a href={a.file_url} target="_blank" rel="noopener noreferrer"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '120px', backgroundColor: '#f8fafc', textDecoration: 'none' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '32px' }}>
+                          {a.media_type === 'video' ? '🎬' : a.media_type === 'audio' ? '🎵' : '📄'}
+                        </div>
+                        <p style={{ fontSize: '11px', color: '#64748b', margin: '4px 0 0' }}>{a.media_type}</p>
+                      </div>
+                    </a>
+                  )}
+                  <div style={{ padding: '8px' }}>
+                    <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>{new Date(a.uploaded_at).toLocaleDateString()}</p>
+                    {user.role === 'admin' && (
+                      <button onClick={() => deleteAttachment(a.attachment_id)}
+                        style={{ fontSize: '11px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: '4px' }}>
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

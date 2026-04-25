@@ -357,6 +357,3 @@ CREATE TABLE AuditLog (
     CONSTRAINT CK_AL_action_type CHECK (action_type IN ('INSERT', 'UPDATE', 'DELETE', 'LOGIN', 'LOUT'))
 );
 
-
-PRINT 'DisasterMIS schema created: 20 tables ready.';
-

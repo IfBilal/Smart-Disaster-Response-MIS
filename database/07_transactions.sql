@@ -167,5 +167,3 @@ BEGIN CATCH
 END CATCH;
 GO
 
-PRINT 'All transaction demonstrations complete.';
-GO

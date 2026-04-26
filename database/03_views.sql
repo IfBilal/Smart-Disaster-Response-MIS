@@ -151,5 +151,3 @@ FROM AuditLog al
 LEFT JOIN Users u ON u.user_id = al.user_id;
 GO
 
-PRINT 'All 8 views created.';
-GO

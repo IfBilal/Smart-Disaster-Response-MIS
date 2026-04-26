@@ -43,5 +43,3 @@ CREATE INDEX IX_Notif_User_IsRead       ON Notifications(user_id, is_read);
 
 GO
 
-PRINT 'Indexes created: 13 single-column + 8 composite.';
-GO

@@ -3,7 +3,7 @@
 A comprehensive MIS built for emergency and disaster response, featuring role-based dashboards, inventory management, incident tracking, and financial tracking.
 
 ## Repository
-GitHub Repo: [https://github.com/IfBilal/Smart-Disaster-Response-MIS](https://github.com/IfBilal/Smart-Disaster-Response-MIS)
+GitHub Repo: [https://github.com/WrittenByAli/Smart-Disaster-Response-MIS](https://github.com/WrittenByAli/Smart-Disaster-Response-MIS)
 
 ## System Roles
 - Administrator

@@ -1,7 +1,8 @@
 -- Smart Disaster Response MIS
--- Run: sqlcmd -S localhost -U sa -P <password> -i database/01_schema.sql
 
 CREATE DATABASE DisasterMIS;
+GO
+
 
 USE DisasterMIS;
 

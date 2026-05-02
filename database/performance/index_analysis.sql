@@ -1,11 +1,11 @@
 USE DisasterMIS;
 GO
 
--- ============================================================
+-- 
 -- Index Performance Analysis
 -- Run this BEFORE and AFTER creating indexes to compare timings.
 -- Use: SET STATISTICS TIME ON to see CPU and elapsed time.
--- ============================================================
+-- 
 
 -- Step 1: Run queries WITHOUT indexes (drop them first if needed)
 -- Step 2: Create indexes (04_indexes.sql)
@@ -70,10 +70,10 @@ SET STATISTICS TIME OFF;
 SET STATISTICS IO OFF;
 GO
 
--- ============================================================
+
 -- INSERT overhead test: measure write cost with indexes active
 -- Run with indexes active, note the time for 100 INSERTs.
--- ============================================================
+-- 
 DECLARE @i INT = 1;
 WHILE @i <= 100
 BEGIN

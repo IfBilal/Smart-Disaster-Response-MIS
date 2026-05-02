@@ -1,4 +1,4 @@
--- ============================================================
+-- 
 -- Smart Disaster Response MIS
 -- 05_seed.sql  --  Sample DML Data (Realistic Demo Dataset)
 -- Run AFTER 01_schema.sql through 04_indexes.sql

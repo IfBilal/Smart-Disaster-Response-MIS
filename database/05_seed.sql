@@ -223,6 +223,4 @@ INSERT INTO Notifications (user_id, message, notification_type, is_read) VALUES
 (5, N'New approval request for financial transaction pending review','approval',   0);
 GO
 
-PRINT 'Seed data inserted successfully.';
-PRINT 'Default password for all users: Password123!';
 GO

@@ -156,5 +156,4 @@ WHERE is_read = 0
 GROUP BY user_id;
 GO
 
-PRINT 'All queries executed.';
 GO

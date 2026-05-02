@@ -262,5 +262,4 @@ BEGIN
 END;
 GO
 
-PRINT 'All 10 triggers created.';
 GO

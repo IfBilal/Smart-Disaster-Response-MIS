@@ -83,5 +83,4 @@ BEGIN
 END;
 GO
 
-PRINT 'Index analysis queries complete. Check Messages tab for timing.';
 GO

@@ -81,5 +81,4 @@ SET STATISTICS TIME OFF;
 SET STATISTICS IO OFF;
 GO
 
-PRINT 'View analysis queries complete. Compare CPU time and logical reads in Messages.';
 GO

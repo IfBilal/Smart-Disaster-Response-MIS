@@ -1,14 +1,14 @@
 import sql from 'mssql'
 
 const config: sql.config = {
-  server: '127.0.0.1',
+  server: process.env.DB_SERVER || '127.0.0.1',
+  port: parseInt(process.env.DB_PORT || '1433'),
   database: process.env.DB_NAME || 'DisasterMIS',
   user: process.env.DB_USER || 'sa',
   password: process.env.DB_PASSWORD || '',
   options: {
     encrypt: false,
     trustServerCertificate: true,
-    instanceName: 'SQLEXPRESS',
   },
   pool: {
     max: 10,

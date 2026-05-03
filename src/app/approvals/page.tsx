@@ -13,6 +13,10 @@ interface Approval {
   requested_by_name: string
   requested_by_role: string
   reviewed_by_name: string
+  resource_name: string
+  warehouse_name: string
+  qty_requested: number
+  hours_pending: number
 }
 
 export default function ApprovalsPage() {

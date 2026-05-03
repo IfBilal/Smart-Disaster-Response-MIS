@@ -38,7 +38,7 @@ export default function AdminDashboard() {
     fetch('/api/auth/me').then(r => r.json()).then(d => { if (d.username) setUser(d) })
 
     fetch('/api/analytics/incidents').then(r => r.json()).then(data => {
-      const total = data.byType?.reduce((s: number, x: { count: number }) => s + x.count, 0) || 0
+      const total = data.byType?.reduce((s: number, x: { total: number }) => s + x.total, 0) || 0
       setStats(prev => ({ ...(prev as Stats), totalReports: total }))
     })
     fetch('/api/analytics/financial').then(r => r.json()).then(data => {

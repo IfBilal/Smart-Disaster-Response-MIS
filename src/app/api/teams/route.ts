@@ -10,13 +10,13 @@ export async function GET(req: NextRequest) {
   const availability = searchParams.get('availability')
   const type = searchParams.get('type')
 
-  let where = 'WHERE 1=1'
-  if (availability) where += ` AND t.availability_status = '${availability}'`
-  if (type) where += ` AND t.team_type = '${type}'`
-
   try {
     const pool = await getPool()
-    const result = await pool.request().query(`
+    const req2 = pool.request()
+    let where = 'WHERE 1=1'
+    if (availability) { where += ' AND t.availability_status = @availability'; req2.input('availability', sql.NVarChar, availability) }
+    if (type)         { where += ' AND t.team_type = @type';                   req2.input('type',         sql.NVarChar, type) }
+    const result = await req2.query(`
       SELECT t.team_id, t.team_name, t.team_type, t.current_location,
              t.availability_status, t.capacity,
              COUNT(tm.member_id) AS members

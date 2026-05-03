@@ -21,17 +21,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       .input('qty', sql.Decimal(12, 2), qty_dispatched)
       .input('approved_by', sql.Int, user.user_id)
       .query(`
-        BEGIN TRY
-          BEGIN TRANSACTION
-            UPDATE ResourceAllocations
-            SET status = 'dispatched', qty_dispatched = @qty, approved_by = @approved_by
-            WHERE allocation_id = @id AND status = 'approved';
-          COMMIT TRANSACTION
-        END TRY
-        BEGIN CATCH
-          IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-          THROW;
-        END CATCH
+        UPDATE ResourceAllocations
+        SET status = 'dispatched', qty_dispatched = @qty, approved_by = @approved_by
+        WHERE allocation_id = @id AND status = 'approved';
       `)
 
     return NextResponse.json({ message: 'Resources dispatched' })

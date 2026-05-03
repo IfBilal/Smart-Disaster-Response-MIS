@@ -70,12 +70,12 @@ export default function HospitalsPage() {
     }
   }
 
-  async function dischargePatient(patientId: number) {
+  async function dischargePatient(patientId: number, condition: string) {
     if (!confirm('Discharge this patient?')) return
     const res = await fetch(`/api/hospitals/patients/${patientId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ discharge_time: new Date().toISOString() }),
+      body: JSON.stringify({ discharge: true, condition }),
     })
     if (res.ok) {
       fetch('/api/hospitals').then(r => r.json()).then(d => { if (Array.isArray(d)) setHospitals(d) })
@@ -214,7 +214,7 @@ export default function HospitalsPage() {
                       {canAdmit && (
                         <td style={{ padding: '12px 16px' }}>
                           {!p.discharge_time && (
-                            <button onClick={() => dischargePatient(p.patient_id)}
+                            <button onClick={() => dischargePatient(p.patient_id, p.condition)}
                               style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.25)', color: '#fb923c', padding: '5px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
                               Discharge
                             </button>

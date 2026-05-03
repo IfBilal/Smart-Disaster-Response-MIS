@@ -12,15 +12,15 @@ export async function GET(req: NextRequest) {
   const disaster_type = searchParams.get('disaster_type')
   const location = searchParams.get('location')
 
-  let where = 'WHERE 1=1'
-  if (status) where += ` AND r.status = '${status}'`
-  if (severity) where += ` AND r.severity_level = '${severity}'`
-  if (disaster_type) where += ` AND r.disaster_type = '${disaster_type}'`
-  if (location) where += ` AND r.location LIKE '%${location}%'`
-
   try {
     const pool = await getPool()
-    const result = await pool.request().query(`
+    const req2 = pool.request()
+    let where = 'WHERE 1=1'
+    if (status)       { where += ' AND r.status = @status';               req2.input('status',       sql.NVarChar, status) }
+    if (severity)     { where += ' AND r.severity_level = @severity';     req2.input('severity',     sql.NVarChar, severity) }
+    if (disaster_type){ where += ' AND r.disaster_type = @disaster_type'; req2.input('disaster_type',sql.NVarChar, disaster_type) }
+    if (location)     { where += ' AND r.location LIKE @location';        req2.input('location',     sql.NVarChar, `%${location}%`) }
+    const result = await req2.query(`
       SELECT TOP 100
         r.report_id, r.disaster_type, r.severity_level, r.location,
         r.latitude, r.longitude, r.status, r.reported_at, r.resolved_at,

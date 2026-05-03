@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const result = await pool.request()
       .input('id', sql.Int, parseInt(id))
       .query(`
-        SELECT r.*, c.full_name, c.phone, c.cnic, u.username AS operator
+        SELECT r.*, c.full_name AS citizen_name, c.phone AS citizen_phone, c.cnic, u.username AS assigned_operator
         FROM EmergencyReports r
         JOIN Citizens c ON c.citizen_id = r.citizen_id
         LEFT JOIN Users u ON u.user_id = r.operator_id

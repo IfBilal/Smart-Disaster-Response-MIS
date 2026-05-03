@@ -26,20 +26,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       .input('reviewed_by', sql.Int, user.user_id)
       .input('remarks', sql.NVarChar, remarks || null)
       .query(`
-        BEGIN TRY
-          BEGIN TRANSACTION
-            UPDATE ApprovalRequests
-            SET status      = @status,
-                reviewed_by = @reviewed_by,
-                reviewed_at = GETDATE(),
-                remarks     = @remarks
-            WHERE approval_id = @id AND status = 'pending';
-          COMMIT TRANSACTION
-        END TRY
-        BEGIN CATCH
-          IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-          THROW;
-        END CATCH
+        UPDATE ApprovalRequests
+        SET status      = @status,
+            reviewed_by = @reviewed_by,
+            reviewed_at = GETDATE(),
+            remarks     = @remarks
+        WHERE approval_id = @id AND status = 'pending';
       `)
 
     return NextResponse.json({ message: `Request ${status}` })

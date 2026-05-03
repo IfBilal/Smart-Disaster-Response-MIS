@@ -43,17 +43,9 @@ export async function POST(req: NextRequest) {
       .input('officer_id', sql.Int, user.user_id)
       .input('condition', sql.NVarChar, condition)
       .query(`
-        BEGIN TRY
-          BEGIN TRANSACTION
-            INSERT INTO Patients (report_id, hospital_id, field_officer_id, admission_time, condition)
-            VALUES (@report_id, @hospital_id, @officer_id, GETDATE(), @condition);
-            SELECT SCOPE_IDENTITY() AS patient_id;
-          COMMIT TRANSACTION
-        END TRY
-        BEGIN CATCH
-          IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-          THROW;
-        END CATCH
+        INSERT INTO Patients (report_id, hospital_id, field_officer_id, admission_time, condition)
+        VALUES (@report_id, @hospital_id, @officer_id, GETDATE(), @condition);
+        SELECT SCOPE_IDENTITY() AS patient_id;
       `)
 
     return NextResponse.json({ patient_id: result.recordset[0].patient_id }, { status: 201 })

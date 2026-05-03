@@ -115,9 +115,20 @@ export default function ApprovalsPage() {
                     <p style={{ color: '#475569', fontSize: '12px', margin: '0 0 4px' }}>
                       {new Date(a.requested_at).toLocaleString()}
                     </p>
-                    {a.reference_id && (
+                    {a.resource_name && (
                       <p style={{ color: '#64748b', fontSize: '12px', margin: '0 0 4px' }}>
-                        Reference ID: <span style={{ color: '#94a3b8' }}>#{a.reference_id}</span>
+                        Resource: <span style={{ color: '#cbd5e1', fontWeight: '600' }}>{a.resource_name}</span>
+                        {a.qty_requested && <span style={{ color: '#475569' }}> — Qty: {a.qty_requested}</span>}
+                      </p>
+                    )}
+                    {a.warehouse_name && (
+                      <p style={{ color: '#64748b', fontSize: '12px', margin: '0 0 4px' }}>
+                        Warehouse: <span style={{ color: '#94a3b8' }}>{a.warehouse_name}</span>
+                      </p>
+                    )}
+                    {a.hours_pending != null && (
+                      <p style={{ color: '#64748b', fontSize: '12px', margin: '0 0 4px' }}>
+                        Pending for: <span style={{ color: a.hours_pending > 24 ? '#f87171' : '#fbbf24' }}>{a.hours_pending}h</span>
                       </p>
                     )}
                     {a.remarks && (

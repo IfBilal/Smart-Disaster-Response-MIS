@@ -51,8 +51,7 @@ export default function TeamsPage() {
     })
     setLoading(false)
     if (res.ok) {
-      const data = await res.json()
-      setTeams(prev => [...prev, { ...data, current_members: 0 }])
+      fetch('/api/teams').then(r => r.json()).then(d => { if (Array.isArray(d)) setTeams(d) })
       setShowForm(false)
       setForm({ team_name: '', team_type: 'rescue', current_location: '', capacity: '5' })
     } else {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPool } from '@/lib/db'
+import { getPool, sql } from '@/lib/db'
 import { checkAuth } from '@/lib/rbac'
 
 export async function GET(req: NextRequest) {
@@ -11,13 +11,13 @@ export async function GET(req: NextRequest) {
   const table = searchParams.get('table')
   const action = searchParams.get('action')
 
-  let where = 'WHERE 1=1'
-  if (table) where += ` AND table_affected = '${table}'`
-  if (action) where += ` AND action_type = '${action}'`
-
   try {
     const pool = await getPool()
-    const result = await pool.request().query(
+    const req2 = pool.request()
+    let where = 'WHERE 1=1'
+    if (table)  { where += ' AND table_affected = @table';  req2.input('table',  sql.NVarChar, table) }
+    if (action) { where += ' AND action_type = @action';    req2.input('action', sql.NVarChar, action) }
+    const result = await req2.query(
       `SELECT TOP 200 * FROM vw_AuditSummary ${where} ORDER BY action_timestamp DESC`
     )
     return NextResponse.json(result.recordset)

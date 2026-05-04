@@ -133,10 +133,11 @@ CREATE TABLE TeamAssignments (
     completed_at  DATETIME      NULL,
     status        NVARCHAR(20)  NOT NULL DEFAULT 'assigned',
     notes         NVARCHAR(MAX) NULL,
-    CONSTRAINT PK_TeamAssignments PRIMARY KEY (assignment_id),
-    CONSTRAINT FK_TA_team         FOREIGN KEY (team_id)   REFERENCES RescueTeams(team_id),
-    CONSTRAINT FK_TA_report       FOREIGN KEY (report_id) REFERENCES EmergencyReports(report_id),
-    CONSTRAINT CK_TA_status       CHECK (status IN ('assigned', 'in_progress', 'completed', 'cancelled'))
+    CONSTRAINT PK_TeamAssignments  PRIMARY KEY (assignment_id),
+    CONSTRAINT FK_TA_team          FOREIGN KEY (team_id)   REFERENCES RescueTeams(team_id),
+    CONSTRAINT FK_TA_report        FOREIGN KEY (report_id) REFERENCES EmergencyReports(report_id),
+    CONSTRAINT CK_TA_status        CHECK (status IN ('assigned', 'in_progress', 'completed', 'cancelled')),
+    CONSTRAINT UQ_TA_team_report   UNIQUE (team_id, report_id)
 );
 
 
@@ -292,7 +293,7 @@ CREATE TABLE Donations (
     donated_at     DATETIME       NOT NULL DEFAULT GETDATE(),
     CONSTRAINT PK_Donations       PRIMARY KEY (donation_id),
     CONSTRAINT FK_Don_received_by FOREIGN KEY (received_by) REFERENCES Users(user_id),
-    CONSTRAINT CK_Don_donor_type  CHECK (donor_type IN ('individual', 'organization', 'vernment')),
+    CONSTRAINT CK_Don_donor_type  CHECK (donor_type IN ('individual', 'organization', 'government')),
     CONSTRAINT CK_Don_amount      CHECK (amount > 0)
 );
 
@@ -301,14 +302,14 @@ CREATE TABLE Expenses (
     expense_id    INT            NOT NULL IDENTITY(1,1),
     recorded_by   INT            NOT NULL,
     allocation_id INT            NULL,
-    catery      NVARCHAR(100)  NOT NULL,
+    category      NVARCHAR(100)  NOT NULL,
     amount        DECIMAL(15,2)  NOT NULL,
     description   NVARCHAR(MAX)  NULL,
     expense_date  DATE           NOT NULL,
     CONSTRAINT PK_Expenses        PRIMARY KEY (expense_id),
     CONSTRAINT FK_Exp_recorded_by FOREIGN KEY (recorded_by)   REFERENCES Users(user_id),
     CONSTRAINT FK_Exp_allocation  FOREIGN KEY (allocation_id) REFERENCES ResourceAllocations(allocation_id),
-    CONSTRAINT CK_Exp_catery    CHECK (catery IN ('procurement', 'logistics', 'medical', 'admin', 'other')),
+    CONSTRAINT CK_Exp_category    CHECK (category IN ('procurement', 'logistics', 'medical', 'admin', 'other')),
     CONSTRAINT CK_Exp_amount      CHECK (amount > 0)
 );
 
@@ -355,6 +356,6 @@ CREATE TABLE AuditLog (
     action_timestamp DATETIME      NOT NULL DEFAULT GETDATE(),
     CONSTRAINT PK_AuditLog       PRIMARY KEY (log_id),
     CONSTRAINT FK_AL_user        FOREIGN KEY (user_id) REFERENCES Users(user_id),
-    CONSTRAINT CK_AL_action_type CHECK (action_type IN ('INSERT', 'UPDATE', 'DELETE', 'LOGIN', 'LOUT'))
+    CONSTRAINT CK_AL_action_type CHECK (action_type IN ('INSERT', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT'))
 );
 

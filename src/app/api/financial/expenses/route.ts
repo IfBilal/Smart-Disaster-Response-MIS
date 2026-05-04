@@ -33,6 +33,16 @@ export async function POST(req: NextRequest) {
 
   const { category, amount, description, expense_date, allocation_id } = await req.json()
 
+  if (!amount || amount <= 0) {
+    return NextResponse.json({ error: 'Expense amount must be greater than zero.' }, { status: 400 })
+  }
+  if (!category || !category.trim()) {
+    return NextResponse.json({ error: 'category is required.' }, { status: 400 })
+  }
+  if (!expense_date) {
+    return NextResponse.json({ error: 'expense_date is required.' }, { status: 400 })
+  }
+
   try {
     const pool = await getPool()
     const result = await pool.request()

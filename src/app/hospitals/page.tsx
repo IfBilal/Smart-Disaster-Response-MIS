@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Navbar from '@/components/Navbar'
+import { fmtDate } from '@/lib/fmt'
 
 interface Hospital {
   hospital_id: number
@@ -53,9 +54,8 @@ export default function HospitalsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         report_id: parseInt(admitForm.report_id),
-        hospital_id: parseInt(admitForm.hospital_id),
+        hospital_id: admitForm.hospital_id ? parseInt(admitForm.hospital_id) : null,
         condition: admitForm.condition,
-        admission_time: new Date().toISOString(),
       }),
     })
     setSubmitting(false)
@@ -207,9 +207,9 @@ export default function HospitalsPage() {
                           {p.condition}
                         </span>
                       </td>
-                      <td style={{ padding: '12px 16px', color: '#cbd5e1', fontSize: '13px' }}>{new Date(p.admission_time).toLocaleDateString()}</td>
+                      <td style={{ padding: '12px 16px', color: '#cbd5e1', fontSize: '13px' }}>{fmtDate(p.admission_time)}</td>
                       <td style={{ padding: '12px 16px', color: p.discharge_time ? '#34d399' : '#334155', fontSize: '13px' }}>
-                        {p.discharge_time ? new Date(p.discharge_time).toLocaleDateString() : '—'}
+                        {fmtDate(p.discharge_time)}
                       </td>
                       {canAdmit && (
                         <td style={{ padding: '12px 16px' }}>
@@ -248,16 +248,17 @@ export default function HospitalsPage() {
                   placeholder="Enter report ID" />
               </div>
               <div style={{ marginBottom: '16px' }}>
-                <label style={labelStyle}>Hospital *</label>
+                <label style={labelStyle}>Hospital</label>
                 <select value={admitForm.hospital_id}
-                  onChange={e => setAdmitForm(p => ({ ...p, hospital_id: e.target.value }))} required>
-                  <option value="">Select hospital</option>
+                  onChange={e => setAdmitForm(p => ({ ...p, hospital_id: e.target.value }))}>
+                  <option value="">Auto-assign (best available)</option>
                   {hospitals.filter(h => h.available_beds > 0).map(h => (
                     <option key={h.hospital_id} value={h.hospital_id}>
                       {h.name} ({h.available_beds} beds available)
                     </option>
                   ))}
                 </select>
+                <p style={{ fontSize: '11px', color: '#475569', margin: '6px 0 0' }}>Leave blank to auto-assign to the hospital with most available beds.</p>
               </div>
               <div style={{ marginBottom: '24px' }}>
                 <label style={labelStyle}>Condition *</label>

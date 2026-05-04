@@ -33,6 +33,13 @@ export async function POST(req: NextRequest) {
 
   const { allocation_id, request_type, reference_id } = await req.json()
 
+  if (!request_type) {
+    return NextResponse.json({ error: 'request_type is required.' }, { status: 400 })
+  }
+  if (request_type === 'resource_allocation' && !allocation_id) {
+    return NextResponse.json({ error: 'allocation_id is required for resource_allocation requests.' }, { status: 400 })
+  }
+
   try {
     const pool = await getPool()
     const result = await pool.request()

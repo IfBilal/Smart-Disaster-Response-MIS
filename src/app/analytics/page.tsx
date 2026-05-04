@@ -39,6 +39,12 @@ interface ResponseTimeData {
   max_minutes: number
 }
 
+interface ApprovalsData {
+  byStatus: { status: string; count: number }[]
+  byType: { request_type: string; total: number; approved: number; rejected: number; pending: number }[]
+  avgReviewTime: { request_type: string; avg_review_minutes: number; reviewed_count: number }[]
+}
+
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
 export default function AnalyticsPage() {
@@ -46,6 +52,7 @@ export default function AnalyticsPage() {
   const [resources, setResources] = useState<ResourceData[]>([])
   const [financial, setFinancial] = useState<FinancialData | null>(null)
   const [responseTimes, setResponseTimes] = useState<ResponseTimeData[]>([])
+  const [approvals, setApprovals] = useState<ApprovalsData | null>(null)
   const [user, setUser] = useState({ username: '', role: '' })
   const [loading, setLoading] = useState(true)
 
@@ -57,11 +64,13 @@ export default function AnalyticsPage() {
       fetch('/api/analytics/resources').then(r => r.json()),
       fetch('/api/analytics/financial').then(r => r.json()),
       fetch('/api/analytics/response-time').then(r => r.json()),
-    ]).then(([inc, res, fin, rt]) => {
+      fetch('/api/analytics/approvals').then(r => r.json()),
+    ]).then(([inc, res, fin, rt, appr]) => {
       setIncidents(inc)
       if (Array.isArray(res)) setResources(res)
       setFinancial(fin)
       if (Array.isArray(rt)) setResponseTimes(rt)
+      if (appr?.byStatus) setApprovals(appr)
       setLoading(false)
     })
   }, [])
@@ -214,7 +223,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Response time details table */}
-        <div className="enter-5" style={{ background: '#0c1829', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', overflow: 'hidden' }}>
+        <div className="enter-5" style={{ background: '#0c1829', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
             <span style={{ color: '#cbd5e1', fontSize: '14px', fontWeight: '600' }}>Response Time Details</span>
           </div>
@@ -246,6 +255,57 @@ export default function AnalyticsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Approval Analytics */}
+        {approvals && (
+          <div className="enter-6" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div style={chartCardStyle}>
+              <p style={chartTitleStyle}>Approvals by Status</p>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie data={approvals.byStatus} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={75} label>
+                    {approvals.byStatus.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Legend wrapperStyle={{ fontSize: '12px', color: '#64748b' }} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div style={chartCardStyle}>
+              <p style={chartTitleStyle}>Approvals by Request Type</p>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={approvals.byType}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                  <XAxis dataKey="request_type" tick={{ fontSize: 10, fill: '#475569' }} />
+                  <YAxis tick={axisStyle} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Bar dataKey="approved" fill="#10b981" name="Approved" stackId="a" />
+                  <Bar dataKey="rejected" fill="#ef4444" name="Rejected" stackId="a" />
+                  <Bar dataKey="pending"  fill="#f59e0b" name="Pending"  stackId="a" />
+                  <Legend wrapperStyle={{ fontSize: '12px', color: '#64748b' }} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {approvals.avgReviewTime.length > 0 && (
+              <div style={{ ...chartCardStyle, gridColumn: '1/-1' }}>
+                <p style={chartTitleStyle}>Average Review Time by Request Type (minutes)</p>
+                <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+                  {approvals.avgReviewTime.map(a => (
+                    <div key={a.request_type} style={{ textAlign: 'center' }}>
+                      <p style={{ fontSize: '11px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 4px' }}>{a.request_type.replace('_', ' ')}</p>
+                      <p style={{ fontSize: '24px', fontWeight: '700', color: '#60a5fa', margin: '0 0 2px' }}>{Math.round(a.avg_review_minutes)}</p>
+                      <p style={{ fontSize: '11px', color: '#334155', margin: 0 }}>min avg · {a.reviewed_count} reviewed</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   )

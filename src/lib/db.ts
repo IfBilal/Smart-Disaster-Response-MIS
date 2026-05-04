@@ -9,6 +9,7 @@ const config: sql.config = {
   options: {
     encrypt: false,
     trustServerCertificate: true,
+    useUTC: false,
   },
   pool: {
     max: 10,

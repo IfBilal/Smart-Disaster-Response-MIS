@@ -21,33 +21,40 @@ const roleLinks: Record<string, { label: string; href: string; icon: string }[]>
     { label: 'Financial', href: '/financial',          icon: 'dollar'  },
     { label: 'Approvals', href: '/approvals',          icon: 'check'   },
     { label: 'Analytics', href: '/analytics',          icon: 'chart'   },
-    { label: 'Audit Log', href: '/audit',              icon: 'shield'  },
+    { label: 'Citizens',       href: '/citizens',            icon: 'person' },
+    { label: 'Audit Log',      href: '/audit',              icon: 'shield' },
+    { label: 'Notifications',  href: '/notifications',       icon: 'bell'   },
   ],
   emergency_operator: [
-    { label: 'Dashboard', href: '/dashboard/operator', icon: 'grid'   },
-    { label: 'Reports',   href: '/reports',             icon: 'file'   },
-    { label: 'Teams',     href: '/teams',               icon: 'users'  },
-    { label: 'Hospitals', href: '/hospitals',            icon: 'cross'  },
-    { label: 'Approvals', href: '/approvals',            icon: 'check'  },
-    { label: 'Analytics', href: '/analytics',            icon: 'chart'  },
+    { label: 'Dashboard',     href: '/dashboard/operator', icon: 'grid'   },
+    { label: 'Reports',       href: '/reports',             icon: 'file'   },
+    { label: 'Teams',         href: '/teams',               icon: 'users'  },
+    { label: 'Hospitals',     href: '/hospitals',           icon: 'cross'  },
+    { label: 'Approvals',     href: '/approvals',           icon: 'check'  },
+    { label: 'Analytics',     href: '/analytics',           icon: 'chart'  },
+    { label: 'Citizens',      href: '/citizens',            icon: 'person' },
+    { label: 'Notifications', href: '/notifications',       icon: 'bell'   },
   ],
   field_officer: [
-    { label: 'Dashboard', href: '/dashboard/field-officer', icon: 'grid'  },
-    { label: 'Reports',   href: '/reports',                 icon: 'file'  },
-    { label: 'Hospitals', href: '/hospitals',               icon: 'cross' },
-    { label: 'Resources', href: '/resources',               icon: 'box'   },
-    { label: 'Approvals', href: '/approvals',               icon: 'check' },
+    { label: 'Dashboard',     href: '/dashboard/field-officer', icon: 'grid'  },
+    { label: 'Reports',       href: '/reports',                 icon: 'file'  },
+    { label: 'Hospitals',     href: '/hospitals',               icon: 'cross' },
+    { label: 'Resources',     href: '/resources',               icon: 'box'   },
+    { label: 'Approvals',     href: '/approvals',               icon: 'check' },
+    { label: 'Notifications', href: '/notifications',           icon: 'bell'  },
   ],
   warehouse_manager: [
-    { label: 'Dashboard', href: '/dashboard/warehouse', icon: 'grid'  },
-    { label: 'Resources', href: '/resources',           icon: 'box'   },
-    { label: 'Approvals', href: '/approvals',           icon: 'check' },
+    { label: 'Dashboard',     href: '/dashboard/warehouse', icon: 'grid'  },
+    { label: 'Resources',     href: '/resources',           icon: 'box'   },
+    { label: 'Approvals',     href: '/approvals',           icon: 'check' },
+    { label: 'Notifications', href: '/notifications',       icon: 'bell'  },
   ],
   finance_officer: [
-    { label: 'Dashboard', href: '/dashboard/finance', icon: 'grid'   },
-    { label: 'Financial', href: '/financial',          icon: 'dollar' },
-    { label: 'Approvals', href: '/approvals',          icon: 'check'  },
-    { label: 'Analytics', href: '/analytics',          icon: 'chart'  },
+    { label: 'Dashboard',     href: '/dashboard/finance', icon: 'grid'   },
+    { label: 'Financial',     href: '/financial',          icon: 'dollar' },
+    { label: 'Approvals',     href: '/approvals',          icon: 'check'  },
+    { label: 'Analytics',     href: '/analytics',          icon: 'chart'  },
+    { label: 'Notifications', href: '/notifications',      icon: 'bell'   },
   ],
 }
 
@@ -103,6 +110,18 @@ function Icon({ name }: { name: string }) {
   if (name === 'shield') return (
     <svg viewBox="0 0 24 24" {...s} {...p}>
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  )
+  if (name === 'bell') return (
+    <svg viewBox="0 0 24 24" {...s} {...p}>
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  )
+  if (name === 'person') return (
+    <svg viewBox="0 0 24 24" {...s} {...p}>
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
     </svg>
   )
   return null

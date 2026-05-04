@@ -33,13 +33,36 @@ export async function POST(req: NextRequest) {
 
   const { report_id, hospital_id, condition } = await req.json()
 
+  if (!report_id || !condition) {
+    return NextResponse.json({ error: 'report_id and condition are required' }, { status: 400 })
+  }
+
+  const validConditions = ['stable', 'serious', 'critical']
+  if (!validConditions.includes(condition)) {
+    return NextResponse.json({ error: 'Invalid condition' }, { status: 400 })
+  }
+
   try {
     const pool = await getPool()
+
+    // Auto-assign: pick hospital with the most available beds
+    let resolvedHospitalId: number | null = hospital_id ? parseInt(hospital_id) : null
+    if (!resolvedHospitalId) {
+      const best = await pool.request().query(`
+        SELECT TOP 1 hospital_id FROM Hospitals
+        WHERE is_active = 1 AND available_beds > 0
+        ORDER BY available_beds DESC
+      `)
+      if (best.recordset.length === 0) {
+        return NextResponse.json({ error: 'No hospitals have available beds.' }, { status: 409 })
+      }
+      resolvedHospitalId = best.recordset[0].hospital_id
+    }
 
     // Transaction E: admit patient — trigger decrements beds
     const result = await pool.request()
       .input('report_id', sql.Int, report_id)
-      .input('hospital_id', sql.Int, hospital_id || null)
+      .input('hospital_id', sql.Int, resolvedHospitalId)
       .input('officer_id', sql.Int, user.user_id)
       .input('condition', sql.NVarChar, condition)
       .query(`

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
+import { fmtDate } from '@/lib/fmt'
 
 interface FinancialSummary {
   total_donations: number
@@ -159,7 +160,7 @@ export default function FinanceDashboard() {
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '12px' }}>
-                        {new Date(t.transaction_timestamp).toLocaleDateString()}
+                        {fmtDate(t.transaction_timestamp)}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         <span style={{ fontSize: '13px', fontWeight: '600', color: isExpense ? '#f87171' : '#34d399' }}>

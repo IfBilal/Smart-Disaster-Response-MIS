@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Navbar from '@/components/Navbar'
+import { fmtDateTime } from '@/lib/fmt'
 
 interface Approval {
   approval_id: number
@@ -113,7 +114,7 @@ export default function ApprovalsPage() {
                       <span style={{ color: '#64748b' }}>({a.requested_by_role.replace('_', ' ')})</span>
                     </p>
                     <p style={{ color: '#475569', fontSize: '12px', margin: '0 0 4px' }}>
-                      {new Date(a.requested_at).toLocaleString()}
+                      {fmtDateTime(a.requested_at)}
                     </p>
                     {a.resource_name && (
                       <p style={{ color: '#64748b', fontSize: '12px', margin: '0 0 4px' }}>

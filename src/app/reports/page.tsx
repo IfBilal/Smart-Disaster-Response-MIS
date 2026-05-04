@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Navbar from '@/components/Navbar'
+import { fmtDate } from '@/lib/fmt'
 import Link from 'next/link'
 
 interface Report {
@@ -133,7 +134,7 @@ export default function ReportsPage() {
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px', color: '#cbd5e1', fontSize: '13px' }}>{r.citizen_name}</td>
-                      <td style={{ padding: '12px 16px', color: '#475569', fontSize: '12px' }}>{new Date(r.reported_at).toLocaleDateString()}</td>
+                      <td style={{ padding: '12px 16px', color: '#475569', fontSize: '12px' }}>{fmtDate(r.reported_at)}</td>
                       <td style={{ padding: '12px 16px' }}>
                         <Link href={`/reports/${r.report_id}`} style={{ color: '#60a5fa', fontWeight: '600', textDecoration: 'none', fontSize: '12px' }}>View →</Link>
                       </td>

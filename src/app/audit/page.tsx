@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Fragment } from 'react'
 import Navbar from '@/components/Navbar'
+import { fmtDateTime } from '@/lib/fmt'
 
 interface AuditEntry {
   log_id: number
@@ -143,8 +144,8 @@ export default function AuditPage() {
               </thead>
               <tbody>
                 {logs.map(entry => (
-                  <>
-                    <tr key={entry.log_id}
+                  <Fragment key={entry.log_id}>
+                    <tr
                       style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.15s' }}
                       onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.025)')}
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
@@ -157,7 +158,7 @@ export default function AuditPage() {
                       <td style={{ ...tdStyle, color: '#64748b' }}>{entry.record_id || '—'}</td>
                       <td style={{ ...tdStyle, color: '#f1f5f9', fontWeight: '500' }}>{entry.performed_by}</td>
                       <td style={{ ...tdStyle, color: '#475569', fontFamily: 'monospace', fontSize: '12px' }}>{entry.ip_address || '—'}</td>
-                      <td style={{ ...tdStyle, color: '#64748b', whiteSpace: 'nowrap' }}>{new Date(entry.action_timestamp).toLocaleString()}</td>
+                      <td style={{ ...tdStyle, color: '#64748b', whiteSpace: 'nowrap' }}>{fmtDateTime(entry.action_timestamp)}</td>
                       <td style={tdStyle}>
                         {(entry.old_value || entry.new_value) && (
                           <button
@@ -174,7 +175,7 @@ export default function AuditPage() {
                       </td>
                     </tr>
                     {expanded === entry.log_id && (
-                      <tr key={`${entry.log_id}-expanded`} style={{ backgroundColor: 'rgba(12,24,41,0.8)' }}>
+                      <tr style={{ backgroundColor: 'rgba(12,24,41,0.8)' }}>
                         <td colSpan={8} style={{ padding: '16px 20px' }}>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                             {entry.old_value && (
@@ -205,7 +206,7 @@ export default function AuditPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
                 {logs.length === 0 && (
                   <tr><td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: '#475569', fontSize: '13px' }}>No audit entries found</td></tr>

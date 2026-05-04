@@ -114,6 +114,30 @@ END CATCH;
 GO
 
 -- ============================================================
+-- Transaction E2: Approval Workflow — Reject Pending Request
+-- Rejecting an ApprovalRequest triggers the linked ResourceAllocation
+-- to be set to 'rejected' automatically (via Trigger 11).
+-- ============================================================
+BEGIN TRY
+    BEGIN TRANSACTION
+
+        UPDATE ApprovalRequests
+        SET status      = 'rejected',
+            reviewed_by = 4,
+            reviewed_at = GETDATE(),
+            remarks     = N'Insufficient justification provided'
+        WHERE approval_id = 5
+          AND status = 'pending';
+        -- trg_ApprovalRequest_Reject fires and sets ResourceAllocations.status = 'rejected'
+
+    COMMIT TRANSACTION
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+END CATCH;
+GO
+
+-- ============================================================
 -- Transaction F: Rollback Demo — Force an insufficient-stock error
 -- This shows the ACID rollback in action.
 -- ============================================================

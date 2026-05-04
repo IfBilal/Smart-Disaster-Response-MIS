@@ -3,6 +3,7 @@
 import { useEffect, useState, use, useRef } from 'react'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
+import { fmtDateTime, fmtDate } from '@/lib/fmt'
 
 interface ReportDetail {
   report_id: number
@@ -31,6 +32,13 @@ interface ReportDetail {
     qty_dispatched: number
     status: string
   }[]
+  budget: {
+    total_allocations: number
+    total_qty_requested: number
+    total_qty_dispatched: number
+    total_expenses: number
+    total_amount_spent: number
+  } | null
 }
 
 interface Attachment {
@@ -67,6 +75,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
   const [user, setUser] = useState({ username: '', role: '' })
   const [updating, setUpdating] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [assignmentUpdating, setAssignmentUpdating] = useState<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   function loadAttachments() {
@@ -92,6 +101,22 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
     setUpdating(false)
     if (res.ok) {
       setReport(prev => prev ? { ...prev, status: newStatus } : prev)
+    } else {
+      const data = await res.json()
+      alert(data.error || 'Update failed')
+    }
+  }
+
+  async function updateAssignment(assignmentId: number, newStatus: string) {
+    setAssignmentUpdating(assignmentId)
+    const res = await fetch(`/api/teams/assignments/${assignmentId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    })
+    setAssignmentUpdating(null)
+    if (res.ok) {
+      fetch(`/api/reports/${id}`).then(r => r.json()).then(d => { if (d.report_id) setReport(d) })
     } else {
       const data = await res.json()
       alert(data.error || 'Update failed')
@@ -192,12 +217,12 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
             </div>
             <div>
               <p style={{ fontSize: '11px', fontWeight: '600', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 6px' }}>Reported At</p>
-              <p style={{ fontWeight: '500', color: '#cbd5e1', margin: 0, fontSize: '13px' }}>{new Date(report.reported_at).toLocaleString()}</p>
+              <p style={{ fontWeight: '500', color: '#cbd5e1', margin: 0, fontSize: '13px' }}>{fmtDateTime(report.reported_at)}</p>
             </div>
             {report.resolved_at && (
               <div>
                 <p style={{ fontSize: '11px', fontWeight: '600', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 6px' }}>Resolved At</p>
-                <p style={{ fontWeight: '500', color: '#34d399', margin: 0, fontSize: '13px' }}>{new Date(report.resolved_at).toLocaleString()}</p>
+                <p style={{ fontWeight: '500', color: '#34d399', margin: 0, fontSize: '13px' }}>{fmtDateTime(report.resolved_at)}</p>
               </div>
             )}
             {report.latitude && (
@@ -209,29 +234,41 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
           </div>
 
           {canUpdate && (
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '18px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '11px', fontWeight: '600', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Update Status:</span>
-              {['pending', 'in_progress', 'resolved', 'closed'].map(s => {
-                const b = statusBadge[s]
-                const isActive = report.status === s
-                return (
-                  <button key={s} onClick={() => updateStatus(s)} disabled={updating || isActive}
-                    style={{
-                      fontSize: '12px',
-                      padding: '6px 14px',
-                      borderRadius: '8px',
-                      border: isActive ? `1px solid ${b.border}` : '1px solid rgba(255,255,255,0.08)',
-                      cursor: isActive ? 'default' : 'pointer',
-                      backgroundColor: isActive ? b.bg : 'rgba(255,255,255,0.03)',
-                      color: isActive ? b.color : '#64748b',
-                      fontWeight: isActive ? '600' : '400',
-                      transition: 'all 0.15s',
-                    }}>
-                    {s.replace('_', ' ')}
-                  </button>
-                )
-              })}
-              {updating && <span style={{ fontSize: '12px', color: '#475569' }}>Updating...</span>}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '18px' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '11px', fontWeight: '600', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Update Status:</span>
+                {['pending', 'in_progress', 'resolved', 'closed'].map(s => {
+                  const b = statusBadge[s]
+                  const isActive = report.status === s
+                  const hasTeam = report.assignments?.length > 0
+                  const blocked = s === 'in_progress' && !hasTeam
+                  return (
+                    <button key={s} onClick={() => !blocked && updateStatus(s)} disabled={updating || isActive || blocked}
+                      title={blocked ? 'Assign a rescue team first before marking in progress' : undefined}
+                      style={{
+                        fontSize: '12px',
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        border: isActive ? `1px solid ${b.border}` : '1px solid rgba(255,255,255,0.08)',
+                        cursor: isActive || blocked ? 'not-allowed' : 'pointer',
+                        backgroundColor: isActive ? b.bg : 'rgba(255,255,255,0.03)',
+                        color: isActive ? b.color : blocked ? '#334155' : '#64748b',
+                        fontWeight: isActive ? '600' : '400',
+                        opacity: blocked ? 0.45 : 1,
+                        transition: 'all 0.15s',
+                      }}>
+                      {s.replace('_', ' ')}
+                    </button>
+                  )
+                })}
+                {updating && <span style={{ fontSize: '12px', color: '#475569' }}>Updating...</span>}
+              </div>
+              {report.assignments?.length === 0 && (
+                <p style={{ fontSize: '12px', color: '#475569', margin: '10px 0 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: '#f59e0b' }}>⚠</span>
+                  Go to <strong style={{ color: '#60a5fa' }}>Teams</strong> and assign a rescue team to enable the &quot;in progress&quot; status.
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -252,10 +289,38 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
                         <p style={{ fontSize: '13px', fontWeight: '600', color: '#f1f5f9', margin: 0 }}>{a.team_name}</p>
                         <span style={{ backgroundColor: ab.bg, color: ab.color, border: `1px solid ${ab.border}`, padding: '2px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '600' }}>{a.status}</span>
                       </div>
-                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: canUpdate ? '8px' : '0' }}>
                         <span style={{ backgroundColor: tb.bg, color: tb.color, border: `1px solid ${tb.border}`, padding: '2px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: '600' }}>{a.team_type}</span>
-                        <span style={{ color: '#475569', fontSize: '11px' }}>{new Date(a.assigned_at).toLocaleString()}</span>
+                        <span style={{ color: '#475569', fontSize: '11px' }}>{fmtDateTime(a.assigned_at)}</span>
                       </div>
+                      {canUpdate && (
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          {a.status === 'assigned' && (
+                            <button
+                              onClick={() => updateAssignment(a.assignment_id, 'in_progress')}
+                              disabled={assignmentUpdating === a.assignment_id}
+                              style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(59,130,246,0.4)', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', cursor: 'pointer', fontWeight: '600' }}>
+                              {assignmentUpdating === a.assignment_id ? '...' : 'Mark Active'}
+                            </button>
+                          )}
+                          {a.status === 'in_progress' && (
+                            <button
+                              onClick={() => updateAssignment(a.assignment_id, 'completed')}
+                              disabled={assignmentUpdating === a.assignment_id}
+                              style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(16,185,129,0.4)', background: 'rgba(16,185,129,0.1)', color: '#34d399', cursor: 'pointer', fontWeight: '600' }}>
+                              {assignmentUpdating === a.assignment_id ? '...' : 'Mark Complete'}
+                            </button>
+                          )}
+                          {(a.status === 'assigned' || a.status === 'in_progress') && (
+                            <button
+                              onClick={() => updateAssignment(a.assignment_id, 'cancelled')}
+                              disabled={assignmentUpdating === a.assignment_id}
+                              style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.07)', color: '#f87171', cursor: 'pointer', fontWeight: '600' }}>
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -292,6 +357,27 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
             )}
           </div>
         </div>
+
+        {/* Budget Summary */}
+        {report.budget && (
+          <div className="enter-3b" style={{ background: '#0c1829', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 16px' }}>Budget Summary</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
+              {[
+                { label: 'Allocations', value: report.budget.total_allocations, color: '#60a5fa' },
+                { label: 'Qty Requested', value: report.budget.total_qty_requested, color: '#94a3b8' },
+                { label: 'Qty Dispatched', value: report.budget.total_qty_dispatched, color: '#34d399' },
+                { label: 'Expenses', value: report.budget.total_expenses, color: '#f59e0b' },
+                { label: 'Amount Spent', value: `PKR ${report.budget.total_amount_spent.toLocaleString()}`, color: '#f87171' },
+              ].map(({ label, value, color }) => (
+                <div key={label}>
+                  <p style={{ fontSize: '11px', fontWeight: '600', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 4px' }}>{label}</p>
+                  <p style={{ fontSize: '18px', fontWeight: '700', color, margin: 0 }}>{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Media Attachments */}
         <div className="enter-4" style={{ background: '#0c1829', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '20px' }}>
@@ -355,7 +441,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
                     </a>
                   )}
                   <div style={{ padding: '8px 10px' }}>
-                    <p style={{ fontSize: '11px', color: '#475569', margin: 0 }}>{new Date(a.uploaded_at).toLocaleDateString()}</p>
+                    <p style={{ fontSize: '11px', color: '#475569', margin: 0 }}>{fmtDate(a.uploaded_at)}</p>
                     {user.role === 'admin' && (
                       <button onClick={() => deleteAttachment(a.attachment_id)}
                         style={{ fontSize: '11px', color: '#f87171', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: '4px', fontWeight: '600' }}>

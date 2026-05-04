@@ -33,6 +33,13 @@ export async function POST(req: NextRequest) {
 
   const { donor_name, donor_type, amount, payment_method } = await req.json()
 
+  if (!donor_name || !donor_name.trim()) {
+    return NextResponse.json({ error: 'donor_name is required.' }, { status: 400 })
+  }
+  if (!amount || amount <= 0) {
+    return NextResponse.json({ error: 'Donation amount must be greater than zero.' }, { status: 400 })
+  }
+
   try {
     const pool = await getPool()
 

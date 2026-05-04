@@ -134,7 +134,26 @@ JOIN Warehouses       w  ON w.warehouse_id = ra.warehouse_id
 LEFT JOIN Users       u  ON u.user_id      = ra.approved_by;
 GO
 
--- View 8: Human-readable audit log (admin only)
+-- View 8: Budget summary per disaster event (links expenses via resource allocations)
+CREATE VIEW vw_BudgetPerEvent AS
+SELECT
+    er.report_id,
+    er.disaster_type,
+    er.severity_level,
+    er.location,
+    er.status                                           AS report_status,
+    COUNT(DISTINCT ra.allocation_id)                    AS total_allocations,
+    ISNULL(SUM(ra.qty_requested),  0)                   AS total_qty_requested,
+    ISNULL(SUM(ra.qty_dispatched), 0)                   AS total_qty_dispatched,
+    COUNT(DISTINCT e.expense_id)                        AS total_expenses,
+    ISNULL(SUM(e.amount), 0)                            AS total_amount_spent
+FROM EmergencyReports er
+LEFT JOIN ResourceAllocations ra ON ra.report_id   = er.report_id
+LEFT JOIN Expenses            e  ON e.allocation_id = ra.allocation_id
+GROUP BY er.report_id, er.disaster_type, er.severity_level, er.location, er.status;
+GO
+
+-- View 9: Human-readable audit log (admin only)
 CREATE VIEW vw_AuditSummary AS
 SELECT
     al.log_id,

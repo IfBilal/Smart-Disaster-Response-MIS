@@ -37,10 +37,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
               JOIN Warehouses w ON w.warehouse_id = ra.warehouse_id
               WHERE ra.report_id = @id`)
 
+    // Budget summary from view
+    const budget = await pool.request()
+      .input('id', sql.Int, parseInt(id))
+      .query(`SELECT * FROM vw_BudgetPerEvent WHERE report_id = @id`)
+
     return NextResponse.json({
       ...result.recordset[0],
       assignments: assignments.recordset,
       allocations: allocations.recordset,
+      budget: budget.recordset[0] || null,
     })
   } catch (err) {
     console.error(err)
@@ -60,6 +66,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   try {
     const pool = await getPool()
+
+    if (status === 'in_progress') {
+      const check = await pool.request()
+        .input('id', sql.Int, parseInt(id))
+        .query(`SELECT COUNT(*) AS cnt FROM TeamAssignments WHERE report_id = @id`)
+      if (check.recordset[0].cnt === 0) {
+        return NextResponse.json({ error: 'Cannot mark in_progress: no rescue team has been assigned to this report.' }, { status: 400 })
+      }
+    }
+
     await pool.request()
       .input('status', sql.NVarChar, status)
       .input('id', sql.Int, parseInt(id))

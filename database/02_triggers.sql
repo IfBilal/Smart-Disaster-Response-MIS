@@ -262,4 +262,57 @@ BEGIN
 END;
 GO
 
+-- Trigger 11: Set team status to 'busy' when assignment moves to in_progress
+CREATE TRIGGER trg_TeamAssignment_Busy
+ON TeamAssignments
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM INSERTED i JOIN DELETED d ON d.assignment_id = i.assignment_id
+        WHERE i.status = 'in_progress' AND d.status <> 'in_progress'
+    ) RETURN;
+
+    UPDATE RescueTeams
+    SET availability_status = 'busy'
+    WHERE team_id IN (
+        SELECT i.team_id FROM INSERTED i JOIN DELETED d ON d.assignment_id = i.assignment_id
+        WHERE i.status = 'in_progress' AND d.status <> 'in_progress'
+    );
+
+    INSERT INTO DispatchLogs (team_id, log_id, status_update, logged_at)
+    SELECT i.team_id,
+           ISNULL((SELECT MAX(log_id) FROM DispatchLogs WHERE team_id = i.team_id), 0) + 1,
+           'Team is now actively working on report #' + CAST(i.report_id AS NVARCHAR),
+           GETDATE()
+    FROM INSERTED i JOIN DELETED d ON d.assignment_id = i.assignment_id
+    WHERE i.status = 'in_progress' AND d.status <> 'in_progress';
+END;
+GO
+
+-- Trigger 12: Revert linked ResourceAllocation to 'rejected' when ApprovalRequest is rejected
+CREATE TRIGGER trg_ApprovalRequest_Reject
+ON ApprovalRequests
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM INSERTED i JOIN DELETED d ON d.approval_id = i.approval_id
+        WHERE i.status = 'rejected' AND d.status = 'pending'
+    ) RETURN;
+
+    UPDATE ra
+    SET ra.status = 'rejected'
+    FROM ResourceAllocations ra
+    JOIN INSERTED i ON i.allocation_id = ra.allocation_id
+    JOIN DELETED  d ON d.approval_id   = i.approval_id
+    WHERE i.status = 'rejected' AND d.status = 'pending'
+      AND i.request_type = 'resource_allocation'
+      AND i.allocation_id IS NOT NULL
+      AND ra.status = 'pending';
+END;
 GO

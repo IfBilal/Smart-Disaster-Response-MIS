@@ -49,21 +49,32 @@ const statusBadge = (status: string) => {
   }
 }
 
+interface Resource { resource_id: number; resource_name: string; resource_type: string; unit_of_measure: string }
+interface Warehouse { warehouse_id: number; name: string; location: string; total_capacity: number; manager_name: string }
+
 export default function ResourcesPage() {
   const [inventory, setInventory] = useState<InventoryItem[]>([])
   const [allocations, setAllocations] = useState<Allocation[]>([])
+  const [resources, setResources] = useState<Resource[]>([])
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([])
   const [user, setUser] = useState({ username: '', role: '' })
-  const [tab, setTab] = useState<'inventory' | 'allocations' | 'request'>('inventory')
+  const [tab, setTab] = useState<'inventory' | 'allocations' | 'request' | 'manage'>('inventory')
   const [showLowStock, setShowLowStock] = useState(false)
   const [requestForm, setRequestForm] = useState({
     report_id: '', resource_id: '', warehouse_id: '', qty_requested: '',
   })
   const [submitting, setSubmitting] = useState(false)
+  const [newResource, setNewResource] = useState({ resource_name: '', resource_type: 'food', unit_of_measure: 'kg', description: '' })
+  const [newWarehouse, setNewWarehouse] = useState({ name: '', location: '', total_capacity: '' })
+  const [stockForm, setStockForm] = useState({ warehouse_id: '', resource_id: '', quantity_available: '', threshold_level: '' })
+  const [manageSubmitting, setManageSubmitting] = useState(false)
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => { if (d.username) setUser(d) })
     fetch('/api/resources/inventory').then(r => r.json()).then(d => { if (Array.isArray(d)) setInventory(d) })
     fetch('/api/resources/allocate').then(r => r.json()).then(d => { if (Array.isArray(d)) setAllocations(d) })
+    fetch('/api/resources/list').then(r => r.json()).then(d => { if (Array.isArray(d)) setResources(d) })
+    fetch('/api/warehouses').then(r => r.json()).then(d => { if (Array.isArray(d)) setWarehouses(d) })
   }, [])
 
   const displayInventory = showLowStock ? inventory.filter(i => i.is_low_stock === 1) : inventory
@@ -92,10 +103,67 @@ export default function ResourcesPage() {
     }
   }
 
+  async function createResource(e: React.FormEvent) {
+    e.preventDefault()
+    setManageSubmitting(true)
+    const res = await fetch('/api/resources/list', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newResource),
+    })
+    setManageSubmitting(false)
+    if (res.ok) {
+      fetch('/api/resources/list').then(r => r.json()).then(d => { if (Array.isArray(d)) setResources(d) })
+      setNewResource({ resource_name: '', resource_type: 'food', unit_of_measure: 'kg', description: '' })
+    } else {
+      const d = await res.json(); alert(d.error || 'Failed')
+    }
+  }
+
+  async function createWarehouse(e: React.FormEvent) {
+    e.preventDefault()
+    setManageSubmitting(true)
+    const res = await fetch('/api/warehouses', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...newWarehouse, total_capacity: parseInt(newWarehouse.total_capacity) || 0 }),
+    })
+    setManageSubmitting(false)
+    if (res.ok) {
+      fetch('/api/warehouses').then(r => r.json()).then(d => { if (Array.isArray(d)) setWarehouses(d) })
+      setNewWarehouse({ name: '', location: '', total_capacity: '' })
+    } else {
+      const d = await res.json(); alert(d.error || 'Failed')
+    }
+  }
+
+  async function updateStock(e: React.FormEvent) {
+    e.preventDefault()
+    setManageSubmitting(true)
+    const res = await fetch('/api/warehouses/inventory', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        warehouse_id: parseInt(stockForm.warehouse_id),
+        resource_id: parseInt(stockForm.resource_id),
+        quantity_available: parseFloat(stockForm.quantity_available),
+        threshold_level: parseFloat(stockForm.threshold_level) || 0,
+      }),
+    })
+    setManageSubmitting(false)
+    if (res.ok) {
+      fetch('/api/resources/inventory').then(r => r.json()).then(d => { if (Array.isArray(d)) setInventory(d) })
+      setStockForm({ warehouse_id: '', resource_id: '', quantity_available: '', threshold_level: '' })
+      alert('Inventory updated')
+    } else {
+      const d = await res.json(); alert(d.error || 'Failed')
+    }
+  }
+
+  const canManage = user.role === 'admin' || user.role === 'warehouse_manager'
+
   const tabLabels: Record<string, string> = {
     inventory: 'Inventory',
     allocations: 'Allocations',
     request: 'Request Resources',
+    manage: 'Manage',
   }
 
   const labelStyle: React.CSSProperties = {
@@ -123,8 +191,8 @@ export default function ResourcesPage() {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '4px', padding: '4px', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', marginBottom: '24px', width: 'fit-content' }}>
-          {(['inventory', 'allocations', 'request'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{
+          {(['inventory', 'allocations', 'request', ...(canManage ? ['manage'] : [])] as const).map(t => (
+            <button key={t} onClick={() => setTab(t as typeof tab)} style={{
               padding: '7px 16px', borderRadius: '7px', fontSize: '13px',
               fontWeight: tab === t ? '600' : '400', border: 'none', cursor: 'pointer',
               background: tab === t ? 'rgba(59,130,246,0.18)' : 'transparent',
@@ -258,16 +326,28 @@ export default function ResourcesPage() {
                     style={inputStyle} placeholder="Enter emergency report ID" />
                 </div>
                 <div>
-                  <label style={labelStyle}>Resource ID *</label>
-                  <input type="number" value={requestForm.resource_id}
-                    onChange={e => setRequestForm(p => ({ ...p, resource_id: e.target.value }))} required
-                    style={inputStyle} placeholder="Enter resource ID" />
+                  <label style={labelStyle}>Resource *</label>
+                  <select value={requestForm.resource_id}
+                    onChange={e => setRequestForm(p => ({ ...p, resource_id: e.target.value }))} required style={inputStyle}>
+                    <option value="">Select resource</option>
+                    {resources.map(r => (
+                      <option key={r.resource_id} value={r.resource_id}>
+                        {r.resource_name} ({r.resource_type} · {r.unit_of_measure})
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
-                  <label style={labelStyle}>Warehouse ID *</label>
-                  <input type="number" value={requestForm.warehouse_id}
-                    onChange={e => setRequestForm(p => ({ ...p, warehouse_id: e.target.value }))} required
-                    style={inputStyle} placeholder="Enter warehouse ID" />
+                  <label style={labelStyle}>Warehouse *</label>
+                  <select value={requestForm.warehouse_id}
+                    onChange={e => setRequestForm(p => ({ ...p, warehouse_id: e.target.value }))} required style={inputStyle}>
+                    <option value="">Select warehouse</option>
+                    {warehouses.map(w => (
+                      <option key={w.warehouse_id} value={w.warehouse_id}>
+                        {w.name} — {w.location}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label style={labelStyle}>Quantity *</label>
@@ -288,6 +368,106 @@ export default function ResourcesPage() {
                 * Request will be sent to admin for approval before dispatch.
               </p>
             </div>
+          </div>
+        )}
+
+        {/* Manage Tab */}
+        {tab === 'manage' && canManage && (
+          <div className="enter-1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+
+            {/* Add Resource */}
+            <div style={{ background: '#0c1829', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '24px' }}>
+              <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 18px' }}>Add Resource Type</h3>
+              <form onSubmit={createResource} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={labelStyle}>Resource Name *</label>
+                  <input value={newResource.resource_name} onChange={e => setNewResource(p => ({ ...p, resource_name: e.target.value }))} required placeholder="e.g. Rice" />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={labelStyle}>Type *</label>
+                    <select value={newResource.resource_type} onChange={e => setNewResource(p => ({ ...p, resource_type: e.target.value }))}>
+                      {['food','water','medicine','shelter','equipment'].map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Unit *</label>
+                    <select value={newResource.unit_of_measure} onChange={e => setNewResource(p => ({ ...p, unit_of_measure: e.target.value }))}>
+                      {['kg','litre','unit','box'].map(u => <option key={u} value={u}>{u}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyle}>Description</label>
+                  <input value={newResource.description} onChange={e => setNewResource(p => ({ ...p, description: e.target.value }))} placeholder="Optional" />
+                </div>
+                <button type="submit" disabled={manageSubmitting}
+                  style={{ background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', border: 'none', padding: '9px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', opacity: manageSubmitting ? 0.6 : 1 }}>
+                  Add Resource
+                </button>
+              </form>
+            </div>
+
+            {/* Add Warehouse (admin only) */}
+            {user.role === 'admin' && (
+              <div style={{ background: '#0c1829', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '24px' }}>
+                <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 18px' }}>Add Warehouse</h3>
+                <form onSubmit={createWarehouse} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div>
+                    <label style={labelStyle}>Name *</label>
+                    <input value={newWarehouse.name} onChange={e => setNewWarehouse(p => ({ ...p, name: e.target.value }))} required placeholder="e.g. North Warehouse" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Location *</label>
+                    <input value={newWarehouse.location} onChange={e => setNewWarehouse(p => ({ ...p, location: e.target.value }))} required placeholder="e.g. Rawalpindi" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Total Capacity</label>
+                    <input type="number" value={newWarehouse.total_capacity} onChange={e => setNewWarehouse(p => ({ ...p, total_capacity: e.target.value }))} placeholder="0" min="0" />
+                  </div>
+                  <button type="submit" disabled={manageSubmitting}
+                    style={{ background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', border: 'none', padding: '9px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', opacity: manageSubmitting ? 0.6 : 1 }}>
+                    Create Warehouse
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* Update Stock */}
+            <div style={{ background: '#0c1829', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '24px', gridColumn: user.role === 'admin' ? '1/-1' : undefined }}>
+              <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 18px' }}>Set Inventory Level</h3>
+              <form onSubmit={updateStock} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={labelStyle}>Warehouse *</label>
+                  <select value={stockForm.warehouse_id} onChange={e => setStockForm(p => ({ ...p, warehouse_id: e.target.value }))} required>
+                    <option value="">Select warehouse</option>
+                    {warehouses.map(w => <option key={w.warehouse_id} value={w.warehouse_id}>{w.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Resource *</label>
+                  <select value={stockForm.resource_id} onChange={e => setStockForm(p => ({ ...p, resource_id: e.target.value }))} required>
+                    <option value="">Select resource</option>
+                    {resources.map(r => <option key={r.resource_id} value={r.resource_id}>{r.resource_name} ({r.unit_of_measure})</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Quantity Available *</label>
+                  <input type="number" step="0.01" min="0" value={stockForm.quantity_available} onChange={e => setStockForm(p => ({ ...p, quantity_available: e.target.value }))} required placeholder="0" />
+                </div>
+                <div>
+                  <label style={labelStyle}>Low-Stock Threshold</label>
+                  <input type="number" step="0.01" min="0" value={stockForm.threshold_level} onChange={e => setStockForm(p => ({ ...p, threshold_level: e.target.value }))} placeholder="0" />
+                </div>
+                <div style={{ gridColumn: '1/-1' }}>
+                  <button type="submit" disabled={manageSubmitting}
+                    style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', padding: '9px 24px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', opacity: manageSubmitting ? 0.6 : 1 }}>
+                    {manageSubmitting ? 'Saving...' : 'Update Stock'}
+                  </button>
+                </div>
+              </form>
+            </div>
+
           </div>
         )}
       </main>

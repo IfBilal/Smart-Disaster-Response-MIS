@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Navbar from '@/components/Navbar'
+import { fmtDate } from '@/lib/fmt'
 
 interface Summary {
   total_donations: number
@@ -212,7 +213,7 @@ export default function FinancialPage() {
                           : { backgroundColor: 'rgba(245,158,11,0.12)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.3)', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '600', display: 'inline-block' }
                         }>{t.status}</span>
                       </td>
-                      <td style={{ ...tdStyle, color: '#64748b' }}>{new Date(t.transaction_timestamp).toLocaleDateString()}</td>
+                      <td style={{ ...tdStyle, color: '#64748b' }}>{fmtDate(t.transaction_timestamp)}</td>
                     </tr>
                   ))}
                   {transactions.length === 0 && (
@@ -250,7 +251,7 @@ export default function FinancialPage() {
                     <td style={{ ...tdStyle, textTransform: 'capitalize' }}>{d.donor_type}</td>
                     <td style={{ ...tdStyle, color: '#34d399' }}>PKR {d.amount.toLocaleString()}</td>
                     <td style={tdStyle}>{d.payment_method}</td>
-                    <td style={{ ...tdStyle, color: '#64748b' }}>{new Date(d.donated_at).toLocaleDateString()}</td>
+                    <td style={{ ...tdStyle, color: '#64748b' }}>{fmtDate(d.donated_at)}</td>
                   </tr>
                 ))}
                 {donations.length === 0 && (

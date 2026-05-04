@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
+import { fmtTime } from '@/lib/fmt'
 
 interface Stats {
   totalReports: number
@@ -172,7 +173,7 @@ export default function AdminDashboard() {
                         </p>
                       </div>
                       <p style={{ color: '#334155', fontSize: '11px', margin: 0, flexShrink: 0 }}>
-                        {new Date(a.action_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {fmtTime(a.action_timestamp)}
                       </p>
                     </div>
                   )

@@ -314,7 +314,24 @@ Students must provide justification for:
 The project should be treated as a complete system, not just a database:
 Students must demonstrate:
  Integration of frontend + backend + database
- Realistic workflows (end-to-end functionality)
+ Realistic wfeat: complete remaining MIS requirements and fix all identified gaps
+
+- Add team member management (API + modal UI with add/remove)
+- Add team assignment status buttons (Mark Active, Mark Complete, Cancel)
+- Add hospital auto-assignment to best available bed on patient admit
+- Add budget per event section on report detail using vw_BudgetPerEvent
+- Add approval analytics charts (by status, type, avg review time)
+- Add notifications page with mark-read support; wire low-stock trigger output to UI
+- Add citizens registry page with search by name/CNIC/phone
+- Add resource/warehouse management tab with inventory upsert (MERGE)
+- Replace raw ID inputs in resource request form with live dropdowns
+- Fix mssql useUTC to false, resolving PKT timestamp display
+- Fix React Fragment key warning in audit log
+- Fix LOUT → LOGOUT schema typo in AuditLog CHECK constraint
+- Add triggers: trg_TeamAssignment_Busy, trg_ApprovalRequest_Reject
+- Add views: vw_BudgetPerEvent, vw_AuditSummary (renumbered)
+- Add notifications, citizens, warehouses, and analytics/approvals API routes
+orkflows (end-to-end functionality)
  Handling of concurrent operations
  Error handling and validation
  Modular and scalable design

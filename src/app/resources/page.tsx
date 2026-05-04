@@ -158,6 +158,26 @@ export default function ResourcesPage() {
   }
 
   const canManage = user.role === 'admin' || user.role === 'warehouse_manager'
+  const [allocUpdating, setAllocUpdating] = useState<number | null>(null)
+
+  async function updateAllocation(allocationId: number, status: string, qty?: number) {
+    setAllocUpdating(allocationId)
+    const body: Record<string, unknown> = { status }
+    if (status === 'dispatched' && qty) body.qty_dispatched = qty
+    if (status === 'consumed' && qty) body.qty_consumed = qty
+    const res = await fetch(`/api/resources/allocate/${allocationId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    setAllocUpdating(null)
+    if (res.ok) {
+      fetch('/api/resources/allocate').then(r => r.json()).then(d => { if (Array.isArray(d)) setAllocations(d) })
+      fetch('/api/resources/inventory').then(r => r.json()).then(d => { if (Array.isArray(d)) setInventory(d) })
+    } else {
+      const d = await res.json(); alert(d.error || 'Failed')
+    }
+  }
 
   const tabLabels: Record<string, string> = {
     inventory: 'Inventory',
@@ -278,7 +298,7 @@ export default function ResourcesPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                  {['ID', 'Resource', 'Incident', 'Requested', 'Dispatched', 'Status', 'Approved By'].map(h => (
+                  {['ID', 'Resource', 'Incident', 'Requested', 'Dispatched', 'Consumed', 'Status', 'Approved By', ...(canManage ? ['Actions'] : [])].map(h => (
                     <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: '11px', fontWeight: '600', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
                   ))}
                 </tr>
@@ -295,15 +315,46 @@ export default function ResourcesPage() {
                     <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '13px' }}>{a.incident_location}</td>
                     <td style={{ padding: '12px 16px', color: '#cbd5e1', fontSize: '13px' }}>{a.qty_requested} {a.unit_of_measure}</td>
                     <td style={{ padding: '12px 16px', color: '#cbd5e1', fontSize: '13px' }}>{a.qty_dispatched}</td>
+                    <td style={{ padding: '12px 16px', color: '#cbd5e1', fontSize: '13px' }}>{a.qty_consumed}</td>
                     <td style={{ padding: '12px 16px' }}>
                       <span style={statusBadge(a.status)}>{a.status}</span>
                     </td>
                     <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '13px' }}>{a.approved_by_name || '—'}</td>
+                    {canManage && (
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          {a.status === 'approved' && (
+                            <button
+                              disabled={allocUpdating === a.allocation_id}
+                              onClick={() => updateAllocation(a.allocation_id, 'dispatched', a.qty_requested)}
+                              style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(16,185,129,0.4)', background: 'rgba(16,185,129,0.1)', color: '#34d399', cursor: 'pointer', fontWeight: '600' }}>
+                              {allocUpdating === a.allocation_id ? '...' : 'Dispatch'}
+                            </button>
+                          )}
+                          {a.status === 'dispatched' && (
+                            <button
+                              disabled={allocUpdating === a.allocation_id}
+                              onClick={() => updateAllocation(a.allocation_id, 'consumed', a.qty_dispatched)}
+                              style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(100,116,139,0.4)', background: 'rgba(100,116,139,0.1)', color: '#94a3b8', cursor: 'pointer', fontWeight: '600' }}>
+                              {allocUpdating === a.allocation_id ? '...' : 'Mark Consumed'}
+                            </button>
+                          )}
+                          {(a.status === 'pending' || a.status === 'approved') && (
+                            <button
+                              disabled={allocUpdating === a.allocation_id}
+                              onClick={() => updateAllocation(a.allocation_id, 'rejected')}
+                              style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.07)', color: '#f87171', cursor: 'pointer', fontWeight: '600' }}>
+                              {allocUpdating === a.allocation_id ? '...' : 'Reject'}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {allocations.length === 0 && (
                   <tr>
-                    <td colSpan={7} style={{ padding: '40px 16px', textAlign: 'center', color: '#475569', fontSize: '13px' }}>
+                    <td colSpan={canManage ? 9 : 8} style={{ padding: '40px 16px', textAlign: 'center', color: '#475569', fontSize: '13px' }}>
                       No allocations found
                     </td>
                   </tr>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, use, useRef } from 'react'
+import { useEffect, useState, use, useRef, useCallback } from 'react'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
 import { fmtDateTime, fmtDate } from '@/lib/fmt'
@@ -78,18 +78,27 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
   const [assignmentUpdating, setAssignmentUpdating] = useState<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   function loadAttachments() {
     fetch(`/api/reports/${id}/attachments`).then(r => r.json()).then(d => {
       if (Array.isArray(d)) setAttachments(d)
     })
   }
 
+  const loadReport = useCallback(() => {
+    fetch(`/api/reports/${id}`).then(r => r.json()).then(d => { if (d.report_id) setReport(d) })
+  }, [id])
+
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => { if (d.username) setUser(d) })
-    fetch(`/api/reports/${id}`).then(r => r.json()).then(d => { if (d.report_id) setReport(d) })
+    loadReport()
     loadAttachments()
+    // Poll every 15 seconds for real-time assignment status updates
+    pollRef.current = setInterval(loadReport, 15000)
+    return () => { if (pollRef.current) clearInterval(pollRef.current) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
+  }, [id, loadReport])
 
   async function updateStatus(newStatus: string) {
     setUpdating(true)
@@ -104,6 +113,22 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
     } else {
       const data = await res.json()
       alert(data.error || 'Update failed')
+    }
+  }
+
+  async function escalateSeverity(newSeverity: string) {
+    setUpdating(true)
+    const res = await fetch(`/api/reports/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ severity_level: newSeverity }),
+    })
+    setUpdating(false)
+    if (res.ok) {
+      setReport(prev => prev ? { ...prev, severity_level: newSeverity } : prev)
+    } else {
+      const data = await res.json()
+      alert(data.error || 'Escalation failed')
     }
   }
 
@@ -268,6 +293,43 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
                   <span style={{ color: '#f59e0b' }}>⚠</span>
                   Go to <strong style={{ color: '#60a5fa' }}>Teams</strong> and assign a rescue team to enable the &quot;in progress&quot; status.
                 </p>
+              )}
+
+              {/* Escalation */}
+              {!['resolved', 'closed'].includes(report.status) && (
+                <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '600', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Escalate Severity:</span>
+                    {(['low', 'medium', 'high', 'critical'] as const).map(sev => {
+                      const sevMap: Record<string, { color: string; border: string; bg: string }> = {
+                        low:      { color: '#34d399', border: 'rgba(16,185,129,0.3)',  bg: 'rgba(16,185,129,0.1)'  },
+                        medium:   { color: '#fbbf24', border: 'rgba(245,158,11,0.3)',  bg: 'rgba(245,158,11,0.1)'  },
+                        high:     { color: '#fb923c', border: 'rgba(249,115,22,0.3)',  bg: 'rgba(249,115,22,0.1)'  },
+                        critical: { color: '#f87171', border: 'rgba(239,68,68,0.3)',   bg: 'rgba(239,68,68,0.1)'   },
+                      }
+                      const b = sevMap[sev]
+                      const isActive = report.severity_level === sev
+                      return (
+                        <button key={sev} onClick={() => !isActive && escalateSeverity(sev)}
+                          disabled={updating || isActive}
+                          style={{
+                            fontSize: '12px', padding: '6px 14px', borderRadius: '8px',
+                            border: isActive ? `1px solid ${b.border}` : '1px solid rgba(255,255,255,0.08)',
+                            cursor: isActive ? 'not-allowed' : 'pointer',
+                            backgroundColor: isActive ? b.bg : 'rgba(255,255,255,0.03)',
+                            color: isActive ? b.color : '#64748b',
+                            fontWeight: isActive ? '600' : '400',
+                            transition: 'all 0.15s',
+                          }}>
+                          {sev}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p style={{ fontSize: '11px', color: '#475569', margin: '8px 0 0' }}>
+                    Escalating to <strong style={{ color: '#f87171' }}>high</strong> or <strong style={{ color: '#f87171' }}>critical</strong> sends an alert notification to all operators.
+                  </p>
+                </div>
               )}
             </div>
           )}

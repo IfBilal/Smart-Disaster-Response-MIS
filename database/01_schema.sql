@@ -37,9 +37,12 @@ CREATE TABLE Citizens (
     phone         NVARCHAR(20)   NULL,
     address       NVARCHAR(MAX)  NULL,
     registered_at DATETIME       NOT NULL DEFAULT GETDATE(),
-    CONSTRAINT PK_Citizens     PRIMARY KEY (citizen_id),
-    CONSTRAINT UQ_Citizens_cnic UNIQUE (cnic)
+    CONSTRAINT PK_Citizens PRIMARY KEY (citizen_id)
 );
+
+-- Unique only when CNIC is provided; multiple NULLs allowed
+CREATE UNIQUE INDEX UX_Citizens_cnic ON Citizens(cnic) WHERE cnic IS NOT NULL;
+GO
 
 
 -- ============================================================

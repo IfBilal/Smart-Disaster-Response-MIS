@@ -18,10 +18,12 @@ interface Hospital {
 interface Patient {
   patient_id: number
   hospital_id: number
+  hospital_name: string
   condition: string
   admission_time: string
   discharge_time: string
   report_id: number
+  incident_location: string
 }
 
 const conditionBadge: Record<string, { bg: string; color: string; border: string }> = {
@@ -186,7 +188,7 @@ export default function HospitalsPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                  {['Patient ID', 'Report ID', 'Hospital ID', 'Condition', 'Admitted', 'Discharged', ...(canAdmit ? ['Action'] : [])].map(h => (
+                  {['Patient ID', 'Report', 'Hospital', 'Condition', 'Admitted', 'Discharged', ...(canAdmit ? ['Action'] : [])].map(h => (
                     <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: '11px', fontWeight: '600', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
                   ))}
                 </tr>
@@ -200,8 +202,8 @@ export default function HospitalsPage() {
                       onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.025)')}
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
                       <td style={{ padding: '12px 16px', color: '#475569', fontSize: '13px', fontWeight: '500' }}>#{p.patient_id}</td>
-                      <td style={{ padding: '12px 16px', color: '#60a5fa', fontSize: '13px' }}>#{p.report_id}</td>
-                      <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '13px' }}>#{p.hospital_id}</td>
+                      <td style={{ padding: '12px 16px', color: '#60a5fa', fontSize: '13px' }}>#{p.report_id} <span style={{ color: '#475569', fontSize: '11px' }}>{p.incident_location}</span></td>
+                      <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '13px' }}>{p.hospital_name}</td>
                       <td style={{ padding: '12px 16px' }}>
                         <span style={{ backgroundColor: cb.bg, color: cb.color, border: `1px solid ${cb.border}`, padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' }}>
                           {p.condition}
@@ -258,7 +260,14 @@ export default function HospitalsPage() {
                     </option>
                   ))}
                 </select>
-                <p style={{ fontSize: '11px', color: '#475569', margin: '6px 0 0' }}>Leave blank to auto-assign to the hospital with most available beds.</p>
+                <p style={{ fontSize: '11px', color: '#475569', margin: '6px 0 0' }}>
+                  Leave blank to auto-assign to the hospital with most available beds.
+                  {!admitForm.hospital_id && hospitals.length > 0 && (
+                    <span style={{ color: '#34d399', fontWeight: '600' }}>
+                      {' '}→ Will assign to: {[...hospitals].sort((a, b) => b.available_beds - a.available_beds)[0]?.name}
+                    </span>
+                  )}
+                </p>
               </div>
               <div style={{ marginBottom: '24px' }}>
                 <label style={labelStyle}>Condition *</label>

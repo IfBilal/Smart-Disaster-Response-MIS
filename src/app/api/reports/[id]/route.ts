@@ -62,7 +62,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   const { id } = await params
-  const { status } = await req.json()
+  const body = await req.json()
+  const { status, severity_level } = body
+
+  const validStatuses   = ['pending', 'in_progress', 'resolved', 'closed']
+  const validSeverities = ['low', 'medium', 'high', 'critical']
+
+  if (status && !validStatuses.includes(status)) {
+    return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
+  }
+  if (severity_level && !validSeverities.includes(severity_level)) {
+    return NextResponse.json({ error: 'Invalid severity_level' }, { status: 400 })
+  }
 
   try {
     const pool = await getPool()
@@ -76,15 +87,36 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     }
 
-    await pool.request()
-      .input('status', sql.NVarChar, status)
+    // Build dynamic SET clause
+    const setParts: string[] = ['operator_id = @operator_id']
+    if (status) {
+      setParts.push('status = @status')
+      setParts.push("resolved_at = CASE WHEN @status IN ('resolved','closed') THEN GETDATE() ELSE resolved_at END")
+    }
+    if (severity_level) setParts.push('severity_level = @severity_level')
+
+    const req2 = pool.request()
       .input('id', sql.Int, parseInt(id))
       .input('operator_id', sql.Int, user.user_id)
-      .query(`UPDATE EmergencyReports
-              SET status = @status,
-                  operator_id = @operator_id,
-                  resolved_at = CASE WHEN @status IN ('resolved','closed') THEN GETDATE() ELSE resolved_at END
-              WHERE report_id = @id`)
+    if (status)         req2.input('status',         sql.NVarChar, status)
+    if (severity_level) req2.input('severity_level', sql.NVarChar, severity_level)
+
+    await req2.query(`UPDATE EmergencyReports SET ${setParts.join(', ')} WHERE report_id = @id`)
+
+    // Notify all emergency_operators when severity escalated to critical or high
+    if (severity_level && ['critical', 'high'].includes(severity_level)) {
+      await pool.request()
+        .input('id', sql.Int, parseInt(id))
+        .input('severity_level', sql.NVarChar, severity_level)
+        .query(`
+          INSERT INTO Notifications (user_id, message, notification_type)
+          SELECT u.user_id,
+            'ESCALATION: Report #' + CAST(@id AS NVARCHAR) + ' severity raised to ' + UPPER(@severity_level),
+            'alert'
+          FROM Users u
+          WHERE u.role IN ('admin', 'emergency_operator') AND u.is_active = 1
+        `)
+    }
 
     return NextResponse.json({ message: 'Updated' })
   } catch (err) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Navbar from '@/components/Navbar'
 
 interface Team {
@@ -11,6 +11,20 @@ interface Team {
   availability_status: string
   capacity: number
   current_members: number
+  members: number
+}
+
+interface DispatchLog {
+  log_id: number
+  status_update: string
+  location_update: string
+  logged_at: string
+  warehouse_name: string
+}
+
+interface SuggestedTeam extends Team {
+  priority_rank: number
+  recommended: boolean
 }
 
 interface Report {
@@ -64,30 +78,54 @@ export default function TeamsPage() {
   const [memberSubmitting, setMemberSubmitting] = useState(false)
   const [memberError, setMemberError]     = useState('')
 
+  // Dispatch logs (history) per team
+  const [logsTarget, setLogsTarget]   = useState<number | null>(null)
+  const [logs, setLogs]               = useState<Record<number, DispatchLog[]>>({})
+
+  // Suggestion state for assign modal
+  const [suggestions, setSuggestions] = useState<SuggestedTeam[]>([])
+  const [suggestMeta, setSuggestMeta] = useState<{ suggested_count: number; preferred_type: string } | null>(null)
+
+  // Real-time polling
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+
   const canAssign = ['admin', 'emergency_operator'].includes(user.role)
+
+  const loadTeams = useCallback(() => {
+    fetch('/api/teams').then(r => r.json()).then(d => {
+      if (Array.isArray(d)) { setTeams(d); setLastUpdated(new Date()) }
+    })
+  }, [])
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => { if (d.username) setUser(d) })
     loadTeams()
-  }, [])
-
-  function loadTeams() {
-    fetch('/api/teams').then(r => r.json()).then(d => { if (Array.isArray(d)) setTeams(d) })
-  }
+    // Poll every 10 seconds for real-time status updates
+    pollRef.current = setInterval(loadTeams, 10000)
+    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+  }, [loadTeams])
 
   function openAssignModal(team: Team) {
     setAssignTarget(team)
     setAssignForm({ report_id: '', notes: '' })
     setAssignError('')
-    // Fetch open reports
+    setSuggestions([])
+    setSuggestMeta(null)
     fetch('/api/reports?status=pending')
       .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setReports(d); else setReports([]) })
+  }
+
+  function onReportSelected(reportId: string) {
+    setAssignForm(p => ({ ...p, report_id: reportId }))
+    if (!reportId) { setSuggestions([]); setSuggestMeta(null); return }
+    const r = reports.find(x => x.report_id === parseInt(reportId))
+    if (!r) return
+    fetch(`/api/teams/suggest?disaster_type=${r.disaster_type}&severity_level=${r.severity_level}&report_id=${r.report_id}`)
+      .then(res => res.json())
       .then(d => {
-        if (Array.isArray(d)) {
-          setReports(d)
-        } else {
-          setReports([])
-        }
+        if (d.teams) { setSuggestions(d.teams); setSuggestMeta({ suggested_count: d.suggested_count, preferred_type: d.preferred_type }) }
       })
   }
 
@@ -154,6 +192,16 @@ export default function TeamsPage() {
     }
   }
 
+  function toggleLogs(teamId: number) {
+    if (logsTarget === teamId) { setLogsTarget(null); return }
+    setLogsTarget(teamId)
+    if (!logs[teamId]) {
+      fetch(`/api/teams/${teamId}/logs`)
+        .then(r => r.json())
+        .then(d => { if (Array.isArray(d)) setLogs(prev => ({ ...prev, [teamId]: d })) })
+    }
+  }
+
   const filtered = filterStatus ? teams.filter(t => t.availability_status === filterStatus) : teams
 
   async function createTeam(e: React.FormEvent) {
@@ -194,7 +242,14 @@ export default function TeamsPage() {
         <div className="enter" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px' }}>
           <div>
             <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#f1f5f9', letterSpacing: '-0.02em', margin: '0 0 4px' }}>Rescue Teams</h1>
-            <p style={{ color: '#475569', fontSize: '13px', margin: 0 }}>Manage and monitor all active response teams</p>
+            <p style={{ color: '#475569', fontSize: '13px', margin: 0 }}>
+              Manage and monitor all active response teams
+              {lastUpdated && (
+                <span style={{ marginLeft: '10px', color: '#334155', fontSize: '11px' }}>
+                  · auto-refreshes every 10s · last updated {lastUpdated.toLocaleTimeString()}
+                </span>
+              )}
+            </p>
           </div>
           {user.role === 'admin' && (
             <button
@@ -326,10 +381,36 @@ export default function TeamsPage() {
                       style={{ width: '100%', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', color: '#60a5fa', padding: '7px 0', borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', transition: 'opacity 0.2s' }}
                       onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
                       onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
-                      Manage Members ({t.current_members})
+                      Manage Members ({t.members ?? t.current_members ?? 0})
                     </button>
                   )}
+                  <button
+                    onClick={() => toggleLogs(t.team_id)}
+                    style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: '#475569', padding: '6px 0', borderRadius: '8px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                    {logsTarget === t.team_id ? '▲ Hide History' : '▼ Activity History'}
+                  </button>
                 </div>
+
+                {/* Dispatch Log History */}
+                {logsTarget === t.team_id && (
+                  <div style={{ marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '10px' }}>
+                    {!logs[t.team_id] ? (
+                      <p style={{ fontSize: '11px', color: '#334155', textAlign: 'center' }}>Loading...</p>
+                    ) : logs[t.team_id].length === 0 ? (
+                      <p style={{ fontSize: '11px', color: '#334155', textAlign: 'center' }}>No activity yet</p>
+                    ) : (
+                      logs[t.team_id].map(log => (
+                        <div key={log.log_id} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'flex-start' }}>
+                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3b82f6', marginTop: '5px', flexShrink: 0 }} />
+                          <div>
+                            <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0, lineHeight: '1.4' }}>{log.status_update}</p>
+                            <p style={{ fontSize: '10px', color: '#334155', margin: 0 }}>{new Date(log.logged_at).toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             )
           })}
@@ -439,7 +520,7 @@ export default function TeamsPage() {
                   <select
                     required
                     value={assignForm.report_id}
-                    onChange={e => setAssignForm(p => ({ ...p, report_id: e.target.value }))}
+                    onChange={e => onReportSelected(e.target.value)}
                     style={{ width: '100%' }}
                   >
                     <option value="">— choose a report —</option>
@@ -464,6 +545,28 @@ export default function TeamsPage() {
                   </div>
                 )
               })()}
+
+              {/* Priority / Suggestion Panel */}
+              {suggestions.length > 0 && suggestMeta && (
+                <div style={{ marginBottom: '16px', background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: '8px', padding: '12px 14px' }}>
+                  <p style={{ fontSize: '11px', fontWeight: '700', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 8px' }}>
+                    Priority Recommendations — {suggestMeta.preferred_type} teams first
+                  </p>
+                  {suggestions.slice(0, 4).map((s, idx) => (
+                    <div key={s.team_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: idx < Math.min(suggestions.length, 4) - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {s.recommended && <span style={{ fontSize: '9px', background: '#10b981', color: '#fff', padding: '1px 5px', borderRadius: '4px', fontWeight: '700' }}>BEST</span>}
+                        <span style={{ fontSize: '12px', color: s.recommended ? '#f1f5f9' : '#94a3b8', fontWeight: s.recommended ? '600' : '400' }}>{s.team_name}</span>
+                        <span style={{ fontSize: '10px', color: '#475569' }}>{s.team_type}</span>
+                      </div>
+                      <span style={{ fontSize: '11px', color: '#475569' }}>{s.members ?? 0} members · {s.current_location || 'no location'}</span>
+                    </div>
+                  ))}
+                  {suggestMeta.suggested_count > 1 && (
+                    <p style={{ fontSize: '10px', color: '#475569', margin: '8px 0 0' }}>⚠ Severity level suggests deploying {suggestMeta.suggested_count} teams to this incident.</p>
+                  )}
+                </div>
+              )}
 
               <div style={{ marginBottom: '20px' }}>
                 <label style={labelStyle}>Notes (optional)</label>

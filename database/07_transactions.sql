@@ -43,7 +43,6 @@ GO
 -- -- Transaction A: Resource Allocation Dispatch
 -- Trigger deducts inventory; rolls back if stock insufficient.
 -- Pre-condition: allocation 12 is 'approved' (set by reset block above).
-
 BEGIN TRY
     BEGIN TRANSACTION
         SELECT allocation_id, status, qty_requested
@@ -60,23 +59,15 @@ BEGIN CATCH
 END CATCH;
 GO
 
--- ============================================================
 -- Transaction B: Rescue Team Assignment
--- UPDLOCK on RescueTeams prevents two operators from assigning
--- the same team simultaneously (both would read 'available').
 -- trg_TeamAssignment_Insert fires → sets team status to 'assigned'.
 -- Pre-condition: team 3 is 'available', report 3 is 'pending' (reset above).
--- ============================================================
 BEGIN TRY
     BEGIN TRANSACTION
-
-        -- UPDLOCK: lock the team row so a concurrent session cannot read
-        -- availability_status = 'available' until this transaction commits.
         SELECT team_id, availability_status
         FROM RescueTeams WITH (UPDLOCK)
         WHERE team_id = 3 AND availability_status = 'available';
 
-        -- Guard: if team is no longer available (grabbed by concurrent session), abort.
         IF @@ROWCOUNT = 0
         BEGIN
             ROLLBACK TRANSACTION;
@@ -91,7 +82,6 @@ BEGIN TRY
         UPDATE EmergencyReports
         SET status = 'in_progress', operator_id = 2
         WHERE report_id = 3 AND status = 'pending';
-
     COMMIT TRANSACTION
 END TRY
 BEGIN CATCH
@@ -99,12 +89,8 @@ BEGIN CATCH
 END CATCH;
 GO
 
--- ============================================================
 -- Transaction C: Record Donation + Finance Transaction
--- Pure inserts — no read-then-write, so UPDLOCK is not needed.
--- Both rows succeed together or both roll back (atomicity).
 -- trg_FinanceTransaction_AuditLog fires → logs entry to AuditLog.
--- ============================================================
 BEGIN TRY
     BEGIN TRANSACTION
 
@@ -122,18 +108,12 @@ BEGIN CATCH
 END CATCH;
 GO
 
--- ============================================================
 -- Transaction D: Approval Workflow — Approve Pending Request
--- UPDLOCK prevents two reviewers from approving simultaneously.
 -- trg_ApprovalRequest_Execute fires → sets linked ResourceAllocation
--- (allocation_id = 10) to 'approved'.
 -- Pre-condition: approval 9 is 'pending' (reset block above).
--- ============================================================
 BEGIN TRY
     BEGIN TRANSACTION
 
-        -- UPDLOCK: lock the approval row so no concurrent reviewer
-        -- can read status='pending' and also proceed to approve.
         SELECT approval_id, status
         FROM ApprovalRequests WITH (UPDLOCK)
         WHERE approval_id = 9 AND status = 'pending';
@@ -153,29 +133,26 @@ BEGIN CATCH
 END CATCH;
 GO
 
--- ============================================================
 -- Transaction E: Patient Admission
--- UPDLOCK on Hospitals prevents the double-admission race condition:
--- two concurrent admissions both reading available_beds > 0 and
--- both proceeding even though only one bed is left.
 -- trg_Patient_Admission fires → decrements available_beds.
 -- If no beds remain the trigger rolls back with an error.
 -- Pre-condition: hospital 3 has available_beds > 0 (verified by reset).
--- ============================================================
 BEGIN TRY
     BEGIN TRANSACTION
-
-        -- UPDLOCK: lock the hospital row before reading bed count.
-        -- A concurrent admission cannot acquire a shared lock on this row
-        -- until this transaction commits, preventing the race condition.
         SELECT hospital_id, available_beds
         FROM Hospitals WITH (UPDLOCK)
         WHERE hospital_id = 3 AND available_beds > 0;
 
+        IF @@ROWCOUNT = 0
+        BEGIN
+            ROLLBACK TRANSACTION;
+            RAISERROR('No beds available in this hospital.', 16, 1);
+            RETURN;
+        END
+
         INSERT INTO Patients (report_id, hospital_id, field_officer_id, admission_time, condition)
         VALUES (8, 3, 3, GETDATE(), 'stable');
         -- trigger fires: decrements available_beds
-        -- if available_beds would go < 0: trigger rolls back and raises error
 
     COMMIT TRANSACTION
 END TRY

@@ -186,30 +186,24 @@ BEGIN CATCH
 END CATCH;
 GO
 
--- ============================================================
+
 -- Transaction F: Rollback Demo — Force Insufficient-Stock Error
 -- Demonstrates ACID rollback + UPDLOCK together.
 -- warehouse_id=1, resource_id=1 has 5 000 units of stock.
 -- Requesting 999 999 causes the dispatch trigger to detect
 -- negative inventory → trigger calls ROLLBACK → no data persists.
--- ============================================================
 BEGIN TRY
     BEGIN TRANSACTION
 
-        -- UPDLOCK: lock the inventory row before checking stock.
-        -- A concurrent request cannot read this row while we hold the lock.
         SELECT warehouse_id, resource_id, quantity_available
         FROM WarehouseInventory WITH (UPDLOCK)
         WHERE warehouse_id = 1 AND resource_id = 1;
 
-        -- Insert an allocation requesting far more than available stock.
         INSERT INTO ResourceAllocations (report_id, resource_id, warehouse_id, qty_requested, status)
         VALUES (1, 1, 1, 999999.00, 'approved');
 
         DECLARE @fake_id INT = SCOPE_IDENTITY();
 
-        -- Dispatch triggers inventory deduction: 5000 - 999999 < 0
-        -- → trigger detects negative stock → ROLLBACK + RAISERROR
         UPDATE ResourceAllocations
         SET status = 'dispatched', qty_dispatched = 999999.00
         WHERE allocation_id = @fake_id;
@@ -218,7 +212,5 @@ BEGIN TRY
 END TRY
 BEGIN CATCH
     IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-    -- Expected output: "Insufficient stock in warehouse." error caught here.
-    -- The INSERT and UPDATE are both rolled back — no data persists.
 END CATCH;
 GO

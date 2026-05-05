@@ -135,7 +135,6 @@ GO
 
 -- Transaction E: Patient Admission
 -- trg_Patient_Admission fires → decrements available_beds.
--- If no beds remain the trigger rolls back with an error.
 -- Pre-condition: hospital 3 has available_beds > 0 (verified by reset).
 BEGIN TRY
     BEGIN TRANSACTION
@@ -161,18 +160,13 @@ BEGIN CATCH
 END CATCH;
 GO
 
--- ============================================================
--- Transaction E2: Approval Workflow — Reject Pending Request
--- UPDLOCK prevents a concurrent approve + reject on the same row.
+
+-- Transaction D2: Approval Workflow — Reject Pending Request
 -- trg_ApprovalRequest_Reject fires → sets linked ResourceAllocation
--- (allocation_id = 11) to 'rejected'.
 -- Pre-condition: approval 10 is 'pending' (reset block above).
--- ============================================================
 BEGIN TRY
     BEGIN TRANSACTION
 
-        -- UPDLOCK: lock the approval row so no concurrent session
-        -- can approve this request while we are rejecting it.
         SELECT approval_id, status
         FROM ApprovalRequests WITH (UPDLOCK)
         WHERE approval_id = 10 AND status = 'pending';

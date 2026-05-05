@@ -19,19 +19,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const pool = await getPool()
 
-    // UPDLOCK: lock team row to prevent concurrent assignments of the same team
+    // Pre-check (no lock): catch obvious duplicate early with a clear error message.
     const dupCheck = await pool.request()
       .input('team_id', sql.Int, parseInt(team_id))
       .input('report_id', sql.Int, report_id)
-      .query(`SELECT 1 AS found FROM TeamAssignments WITH (UPDLOCK) WHERE team_id = @team_id AND report_id = @report_id`)
+      .query(`SELECT 1 AS found FROM TeamAssignments WHERE team_id = @team_id AND report_id = @report_id`)
 
     if (dupCheck.recordset.length > 0) {
       return NextResponse.json({ error: 'This team is already assigned to this report.' }, { status: 409 })
     }
 
-    // Transaction B: assign team + update report status atomically.
-    // We check @@ROWCOUNT on the report update — if 0 rows affected the report
-    // was no longer pending (race condition), so we roll back the whole transaction.
+    // Transaction B: UPDLOCK is on RescueTeams (the availability row), inside the
+    // transaction so the lock is held from SELECT until COMMIT.
+    // Two concurrent operators cannot both read availability_status='available'
+    // for the same team — the second one blocks until the first commits.
     await pool.request()
       .input('team_id', sql.Int, parseInt(team_id))
       .input('report_id', sql.Int, report_id)
@@ -41,20 +42,26 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         BEGIN TRY
           BEGIN TRANSACTION
 
+            -- UPDLOCK on RescueTeams: lock the availability row; held until COMMIT.
+            -- Concurrent assignment of the same team is blocked until this commits.
+            SELECT team_id, availability_status
+            FROM RescueTeams WITH (UPDLOCK)
+            WHERE team_id = @team_id AND availability_status = 'available';
+
+            IF @@ROWCOUNT = 0
+            BEGIN
+              ROLLBACK TRANSACTION;
+              RAISERROR('Team is not available for assignment.', 16, 1);
+              RETURN;
+            END
+
+            -- trg_TeamAssignment_Insert fires: sets RescueTeams.availability_status = 'assigned'
             INSERT INTO TeamAssignments (team_id, report_id, status, notes)
             VALUES (@team_id, @report_id, 'assigned', @notes);
 
             UPDATE EmergencyReports
             SET status = 'in_progress', operator_id = @operator_id
             WHERE report_id = @report_id AND status = 'pending';
-
-            IF @@ROWCOUNT = 0
-            BEGIN
-              -- Report was not pending (already in_progress/resolved by concurrent request).
-              -- The team assignment is still valid; just don't force status back.
-              -- No rollback needed — assigning a team to an active report is fine.
-              DECLARE @dummy INT = 0;
-            END
 
           COMMIT TRANSACTION
         END TRY

@@ -45,33 +45,67 @@ export async function POST(req: NextRequest) {
   try {
     const pool = await getPool()
 
-    // Auto-assign: pick hospital with the most available beds
-    let resolvedHospitalId: number | null = hospital_id ? parseInt(hospital_id) : null
-    if (!resolvedHospitalId) {
-      const best = await pool.request().query(`
-        SELECT TOP 1 hospital_id FROM Hospitals
-        WHERE is_active = 1 AND available_beds > 0
-        ORDER BY available_beds DESC
-      `)
-      if (best.recordset.length === 0) {
-        return NextResponse.json({ error: 'No hospitals have available beds.' }, { status: 409 })
-      }
-      resolvedHospitalId = best.recordset[0].hospital_id
-    }
-
-    // Transaction E: admit patient — trigger decrements beds
+    // Transaction E: UPDLOCK on Hospitals and INSERT in the same transaction block.
+    // The lock is held from the SELECT until COMMIT — two concurrent admissions
+    // cannot both read available_beds > 0 for the same hospital simultaneously.
+    //
+    // If hospital_id is provided, lock that specific hospital.
+    // If not, auto-assign: SELECT TOP 1 WITH UPDLOCK picks the best hospital and
+    // locks it atomically, so another concurrent admission cannot grab the same slot.
     const result = await pool.request()
       .input('report_id', sql.Int, report_id)
-      .input('hospital_id', sql.Int, resolvedHospitalId)
+      .input('hospital_id', sql.Int, hospital_id ? parseInt(hospital_id) : null)
       .input('officer_id', sql.Int, user.user_id)
       .input('condition', sql.NVarChar, condition)
       .query(`
-        INSERT INTO Patients (report_id, hospital_id, field_officer_id, admission_time, condition)
-        VALUES (@report_id, @hospital_id, @officer_id, GETDATE(), @condition);
-        SELECT SCOPE_IDENTITY() AS patient_id;
+        BEGIN TRY
+          BEGIN TRANSACTION
+
+            DECLARE @hid INT = @hospital_id;
+
+            IF @hid IS NULL
+            BEGIN
+              -- Auto-assign: UPDLOCK on the chosen hospital row prevents another
+              -- concurrent admission from also picking and locking the same hospital.
+              SELECT TOP 1 @hid = hospital_id
+              FROM Hospitals WITH (UPDLOCK)
+              WHERE is_active = 1 AND available_beds > 0
+              ORDER BY available_beds DESC;
+            END
+            ELSE
+            BEGIN
+              -- Manual assign: UPDLOCK on the specified hospital row.
+              SELECT @hid = hospital_id
+              FROM Hospitals WITH (UPDLOCK)
+              WHERE hospital_id = @hid AND available_beds > 0 AND is_active = 1;
+            END
+
+            IF @hid IS NULL
+            BEGIN
+              ROLLBACK TRANSACTION;
+              RAISERROR('No hospital available with open beds.', 16, 1);
+              RETURN;
+            END
+
+            -- trg_Patient_Admission fires: decrements available_beds.
+            -- If beds go negative the trigger rolls back and raises an error.
+            INSERT INTO Patients (report_id, hospital_id, field_officer_id, admission_time, condition)
+            VALUES (@report_id, @hid, @officer_id, GETDATE(), @condition);
+
+            SELECT SCOPE_IDENTITY() AS patient_id, @hid AS hospital_id;
+
+          COMMIT TRANSACTION
+        END TRY
+        BEGIN CATCH
+          IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+          THROW;
+        END CATCH
       `)
 
-    return NextResponse.json({ patient_id: result.recordset[0].patient_id }, { status: 201 })
+    return NextResponse.json({
+      patient_id: result.recordset[0].patient_id,
+      hospital_id: result.recordset[0].hospital_id
+    }, { status: 201 })
   } catch (err: unknown) {
     console.error(err)
     const msg = err instanceof Error ? err.message : 'Server error'

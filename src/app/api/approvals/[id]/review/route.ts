@@ -20,9 +20,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const pool = await getPool()
 
     // Fetch the approval to validate it exists, is still pending, and check type
+    // UPDLOCK: lock the row so two reviewers can't approve simultaneously
     const fetch = await pool.request()
       .input('id', sql.Int, parseInt(id))
-      .query(`SELECT status, request_type, allocation_id FROM ApprovalRequests WHERE approval_id = @id`)
+      .query(`SELECT status, request_type, allocation_id FROM ApprovalRequests WITH (UPDLOCK) WHERE approval_id = @id`)
 
     if (!fetch.recordset[0]) {
       return NextResponse.json({ error: 'Approval request not found.' }, { status: 404 })

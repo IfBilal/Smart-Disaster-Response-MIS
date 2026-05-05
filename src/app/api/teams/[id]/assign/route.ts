@@ -19,11 +19,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const pool = await getPool()
 
-    // Prevent assigning the same team to the same report twice
+    // UPDLOCK: lock team row to prevent concurrent assignments of the same team
     const dupCheck = await pool.request()
       .input('team_id', sql.Int, parseInt(team_id))
       .input('report_id', sql.Int, report_id)
-      .query(`SELECT 1 AS found FROM TeamAssignments WHERE team_id = @team_id AND report_id = @report_id`)
+      .query(`SELECT 1 AS found FROM TeamAssignments WITH (UPDLOCK) WHERE team_id = @team_id AND report_id = @report_id`)
 
     if (dupCheck.recordset.length > 0) {
       return NextResponse.json({ error: 'This team is already assigned to this report.' }, { status: 409 })

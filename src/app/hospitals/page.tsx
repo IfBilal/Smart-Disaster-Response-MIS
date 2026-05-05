@@ -36,7 +36,9 @@ export default function HospitalsPage() {
   const [hospitals, setHospitals] = useState<Hospital[]>([])
   const [patients, setPatients] = useState<Patient[]>([])
   const [user, setUser] = useState({ username: '', role: '' })
-  const [tab, setTab] = useState<'hospitals' | 'patients' | 'admit'>('hospitals')
+  const [tab, setTab] = useState<'hospitals' | 'patients' | 'admit' | 'manage'>('hospitals')
+  const [editHospital, setEditHospital] = useState<{ hospital_id: number; total_beds: number; available_beds: number } | null>(null)
+  const [bedUpdating, setBedUpdating] = useState(false)
   const [admitForm, setAdmitForm] = useState({
     report_id: '', hospital_id: '', condition: 'stable',
   })
@@ -88,7 +90,27 @@ export default function HospitalsPage() {
     }
   }
 
-  const canAdmit = user.role === 'admin' || user.role === 'field_officer'
+  const canAdmit  = user.role === 'admin' || user.role === 'field_officer'
+  const isAdmin   = user.role === 'admin'
+
+  async function updateBeds(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editHospital) return
+    setBedUpdating(true)
+    const res = await fetch(`/api/hospitals/${editHospital.hospital_id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ total_beds: editHospital.total_beds, available_beds: editHospital.available_beds }),
+    })
+    setBedUpdating(false)
+    if (res.ok) {
+      fetch('/api/hospitals').then(r => r.json()).then(d => { if (Array.isArray(d)) setHospitals(d) })
+      setEditHospital(null)
+      alert('Hospital updated')
+    } else {
+      const d = await res.json(); alert(d.error || 'Failed')
+    }
+  }
 
   const labelStyle: React.CSSProperties = {
     fontSize: '11px',
@@ -113,7 +135,7 @@ export default function HospitalsPage() {
 
         {/* Tabs */}
         <div className="enter-1" style={{ display: 'flex', gap: '4px', padding: '4px', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', marginBottom: '24px', width: 'fit-content' }}>
-          {(['hospitals', 'patients', ...(canAdmit ? ['admit'] : [])] as const).map(t => (
+          {(['hospitals', 'patients', ...(canAdmit ? ['admit'] : []), ...(isAdmin ? ['manage'] : [])] as const).map(t => (
             <button key={t} onClick={() => setTab(t as typeof tab)}
               style={{
                 padding: '7px 16px',
@@ -126,7 +148,7 @@ export default function HospitalsPage() {
                 color: tab === t ? '#60a5fa' : '#64748b',
                 transition: 'all 0.18s',
               }}>
-              {t === 'admit' ? 'Admit Patient' : t.charAt(0).toUpperCase() + t.slice(1)}
+              {t === 'admit' ? 'Admit Patient' : t === 'manage' ? 'Manage Beds' : t.charAt(0).toUpperCase() + t.slice(1)}
             </button>
           ))}
         </div>
@@ -285,7 +307,154 @@ export default function HospitalsPage() {
             </form>
           </div>
         )}
+        {/* Manage Beds tab */}
+        {tab === 'manage' && isAdmin && (
+          <>
+          {/* Add Hospital Form */}
+          <div className="enter-2" style={{ background: '#0c1829', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '24px', marginBottom: '20px', maxWidth: '600px' }}>
+            <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 18px' }}>Add New Hospital</h3>
+            <AddHospitalForm onAdded={() => fetch('/api/hospitals').then(r => r.json()).then(d => { if (Array.isArray(d)) setHospitals(d) })} labelStyle={labelStyle} />
+          </div>
+
+          <div style={{ background: '#0c1829', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              <span style={{ color: '#cbd5e1', fontSize: '14px', fontWeight: '600' }}>Manage Hospital Bed Counts</span>
+              <p style={{ color: '#475569', fontSize: '12px', margin: '4px 0 0' }}>Click a hospital to edit its bed counts for load balancing tests.</p>
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                  {['Hospital', 'Total Beds', 'Available Beds', 'Occupied', 'Action'].map(h => (
+                    <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: '11px', fontWeight: '600', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {hospitals.map(h => (
+                  <tr key={h.hospital_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <td style={{ padding: '12px 16px', color: '#f1f5f9', fontSize: '13px', fontWeight: '500' }}>{h.name}</td>
+                    <td style={{ padding: '12px 16px', color: '#cbd5e1', fontSize: '13px' }}>{h.total_beds}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span style={{ color: h.available_beds === 0 ? '#f87171' : '#34d399', fontWeight: '600', fontSize: '13px' }}>{h.available_beds}</span>
+                    </td>
+                    <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '13px' }}>{h.occupied_beds}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <button onClick={() => setEditHospital({ hospital_id: h.hospital_id, total_beds: h.total_beds, available_beds: h.available_beds })}
+                        style={{ fontSize: '11px', padding: '4px 12px', borderRadius: '6px', border: '1px solid rgba(59,130,246,0.4)', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', cursor: 'pointer', fontWeight: '600' }}>
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Edit form */}
+            {editHospital && (
+              <div style={{ padding: '20px', borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(59,130,246,0.04)' }}>
+                <h4 style={{ color: '#60a5fa', fontSize: '13px', fontWeight: '600', margin: '0 0 16px' }}>
+                  Editing: {hospitals.find(h => h.hospital_id === editHospital.hospital_id)?.name}
+                </h4>
+                <form onSubmit={updateBeds} style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                  <div>
+                    <label style={labelStyle}>Total Beds</label>
+                    <input type="number" min="0" value={editHospital.total_beds}
+                      onChange={e => setEditHospital(p => p ? { ...p, total_beds: parseInt(e.target.value) || 0 } : p)}
+                      style={{ width: '120px' }} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Available Beds</label>
+                    <input type="number" min="0" max={editHospital.total_beds} value={editHospital.available_beds}
+                      onChange={e => setEditHospital(p => p ? { ...p, available_beds: parseInt(e.target.value) || 0 } : p)}
+                      style={{ width: '120px' }} />
+                  </div>
+                  <button type="submit" disabled={bedUpdating}
+                    style={{ background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', color: '#fff', border: 'none', padding: '9px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                    {bedUpdating ? 'Saving...' : 'Save'}
+                  </button>
+                  <button type="button" onClick={() => setEditHospital(null)}
+                    style={{ background: 'transparent', color: '#64748b', border: '1px solid rgba(255,255,255,0.08)', padding: '9px 16px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                    Cancel
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+          </>
+        )}
       </main>
     </div>
+  )
+}
+
+function AddHospitalForm({ onAdded, labelStyle }: { onAdded: () => void; labelStyle: React.CSSProperties }) {
+  const [form, setForm] = useState({ name: '', location: '', total_beds: '', contact_number: '' })
+  const [submitting, setSubmitting] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const beds = parseInt(form.total_beds) || 0
+    if (beds <= 0) { alert('Total beds must be greater than 0'); return }
+    if (beds > 10000) { alert('Total beds cannot exceed 10,000'); return }
+    if (!form.name.trim()) { alert('Hospital name is required'); return }
+    if (!form.location.trim()) { alert('Location is required'); return }
+    setSubmitting(true)
+    const res = await fetch('/api/hospitals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...form, total_beds: beds }),
+    })
+    setSubmitting(false)
+    if (res.ok) {
+      setForm({ name: '', location: '', total_beds: '', contact_number: '' })
+      onAdded()
+      alert('Hospital added successfully')
+    } else {
+      const d = await res.json(); alert(d.error || 'Failed')
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+      <div>
+        <label style={labelStyle}>Hospital Name *</label>
+        <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required placeholder="e.g. Quetta Civil Hospital" />
+      </div>
+      <div>
+        <label style={labelStyle}>Location *</label>
+        <input value={form.location} onChange={e => setForm(p => ({ ...p, location: e.target.value }))} required placeholder="e.g. Quetta, Brewery Road" />
+      </div>
+      <div>
+        <label style={labelStyle}>Total Beds *</label>
+        <input
+          type="number" min="1" max="10000" value={form.total_beds}
+          onChange={e => {
+            const val = parseInt(e.target.value)
+            if (e.target.value === '') { setForm(p => ({ ...p, total_beds: '' })); return }
+            if (val > 0) setForm(p => ({ ...p, total_beds: String(val) }))
+          }}
+          required placeholder="e.g. 200"
+        />
+      </div>
+      <div>
+        <label style={labelStyle}>Contact Number</label>
+        <input
+          value={form.contact_number}
+          onChange={e => {
+            const val = e.target.value
+            // only digits allowed, no dashes, no letters, no special chars
+            if (/^[0-9]*$/.test(val)) setForm(p => ({ ...p, contact_number: val }))
+          }}
+          placeholder="e.g. 0819201234"
+          maxLength={15}
+        />
+      </div>
+      <div style={{ gridColumn: '1/-1' }}>
+        <button type="submit" disabled={submitting}
+          style={{ background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', color: '#fff', border: 'none', padding: '9px 24px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.6 : 1 }}>
+          {submitting ? 'Adding...' : 'Add Hospital'}
+        </button>
+      </div>
+    </form>
   )
 }

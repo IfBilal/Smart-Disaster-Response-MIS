@@ -21,9 +21,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const pool = await getPool()
 
+    // UPDLOCK: lock the row at read time to prevent concurrent status changes
     const check = await pool.request()
       .input('id', sql.Int, parseInt(id))
-      .query(`SELECT status, qty_requested FROM ResourceAllocations WHERE allocation_id = @id`)
+      .query(`SELECT status, qty_requested FROM ResourceAllocations WITH (UPDLOCK) WHERE allocation_id = @id`)
 
     if (!check.recordset[0]) {
       return NextResponse.json({ error: 'Allocation not found.' }, { status: 404 })

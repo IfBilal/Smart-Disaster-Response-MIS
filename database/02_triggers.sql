@@ -255,10 +255,10 @@ BEGIN
     INSERT INTO AuditLog (user_id, action_type, table_affected, record_id, old_value, new_value, action_timestamp)
     SELECT i.reviewed_by, 'UPDATE', 'ApprovalRequests', i.approval_id,
            '{"status":"pending"}',
-           '{"status":"' + i.status + '"}',
+           '{"status":"approved"}',
            GETDATE()
     FROM INSERTED i JOIN DELETED d ON d.approval_id = i.approval_id
-    WHERE i.status IN ('approved', 'rejected') AND d.status = 'pending';
+    WHERE i.status = 'approved' AND d.status = 'pending';
 END;
 GO
 
@@ -314,5 +314,13 @@ BEGIN
       AND i.request_type = 'resource_allocation'
       AND i.allocation_id IS NOT NULL
       AND ra.status = 'pending';
+
+    INSERT INTO AuditLog (user_id, action_type, table_affected, record_id, old_value, new_value, action_timestamp)
+    SELECT i.reviewed_by, 'UPDATE', 'ApprovalRequests', i.approval_id,
+           '{"status":"pending"}',
+           '{"status":"rejected"}',
+           GETDATE()
+    FROM INSERTED i JOIN DELETED d ON d.approval_id = i.approval_id
+    WHERE i.status = 'rejected' AND d.status = 'pending';
 END;
 GO
